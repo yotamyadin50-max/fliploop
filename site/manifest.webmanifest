@@ -1,0 +1,21 @@
+{
+  "name": "FlipLoop",
+  "short_name": "FlipLoop",
+  "description": "ציירו פריים אחרי פריים ותראו את הציור זז.",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#DAD6CC",
+  "theme_color": "#DAD6CC",
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "אנימציה חדשה", "url": "./#/new", "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }] },
+    { "name": "האתגר של השבוע", "url": "./#/challenge", "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

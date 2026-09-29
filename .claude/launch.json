@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fliploop",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5178", "--bind", "127.0.0.1", "--directory", "C:/Users/yotam/Documents/yotam12/the-system/O-output/40-fliploop/site"],
+      "port": 5178
+    }
+  ]
+}
