@@ -15,9 +15,9 @@ import { Player } from "./playback.js";
 import { UndoManager } from "./undo.js";
 import { DrawingInput, WIDTHS } from "./drawing.js";
 import { LessonMode } from "./lesson-mode.js";
-import { colorPanel, onionPanel, sizePanel, clearButton, moveButton, widthPanel, frameMenu, colorName } from "./panels.js";
+import { colorPanel, onionPanel, sizePanel, clearButton, moveButton, widthPanel, frameMenu, colorName, isBaseColor } from "./panels.js";
 import { Autosaver } from "../store/autosave.js";
-import { getSettings, updateSettings, getProgress, updateProgress } from "../store/settings.js";
+import { getSettings, updateSettings, getProgress, updateProgress, rememberColor } from "../store/settings.js";
 import { isFull, checkNearlyFull } from "../store/storage.js";
 import { downloadDocFile } from "../store/project-file.js";
 import { duplicateProject, TITLE_MAX, nextDefaultTitle } from "../store/projects.js";
@@ -34,7 +34,6 @@ export class EditorScreen {
     this.pencilWidth = "m";
     this.eraserWidth = "m";
     this.color = "#1F1E1B";
-    this.recentColor = null;
     this.cur = 0;
     this.cleanups = [];
     this.coach = null;
@@ -270,7 +269,7 @@ export class EditorScreen {
     clear(this.panel);
     if (!isDesktop()) return;
     this.panel.append(
-      h("div", { class: "panel-group" }, h("h3", { class: "panel-title" }, t("colors.title")), colorPanel(this)),
+      h("div", { class: "panel-group" }, h("h3", { class: "panel-title" }, t("colors.title")), colorPanel(this, { context: "panel" })),
       onionPanel(this),
       sizePanel(this),
       clearButton(this));
@@ -482,9 +481,24 @@ export class EditorScreen {
     this.stage?.el.classList.toggle("stage--move", this.tool === "move");
   }
 
-  setColor(hex, { custom = false } = {}) {
+  /** Persisted, newest first, at most 7, never a base swatch (settings.recentColors). */
+  get recentColors() {
+    return getSettings().recentColors || [];
+  }
+
+  get shadesOpen() {
+    return !!getSettings().shadesOpen;
+  }
+
+  setShadesOpen(open) {
+    updateSettings({ shadesOpen: open });
+  }
+
+  /** Any non-base pick (a shade, a recent chip, "צבע אחר") is remembered in recentColors. */
+  setColor(hex) {
+    hex = hex.toUpperCase();
     this.color = hex;
-    if (custom) this.recentColor = hex;
+    if (!isBaseColor(hex)) rememberColor(hex);
     if (this.tool === "eraser" || this.tool === "move") this.setTool("pencil");
     this.refreshColorKey();
   }
@@ -497,7 +511,18 @@ export class EditorScreen {
   }
 
   openColors(anchor) {
-    const s = openSheet({ title: t("colors.title"), body: colorPanel(this, { onPick: () => s.close() }), anchor, owner: this });
+    const body = colorPanel(this, { onPick: () => s.close() });
+    const s = openSheet({ title: t("colors.title"), body, anchor, owner: this, className: this.shadesOpen ? "sheet--tall" : "" });
+    body.afterOpen?.();
+  }
+
+  /** Desktop: the whole shade chart in a popover beside the side panel. It is a registered
+   *  sheet, so the router's closeAllSheets() closes it on any route change (Back). */
+  openShadesPopover(toggle, body, onClose) {
+    return openSheet({
+      title: t("colors.shades.title"), body, anchor: toggle, side: this.panel, className: "sheet--shades", owner: this,
+      onClose,
+    });
   }
 
   openMore(anchor) {

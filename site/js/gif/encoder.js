@@ -10,6 +10,10 @@ export class PaletteBuilder {
     this.exact = new Map(); // 24-bit colour -> count, until it passes 256 entries
     this.exactOverflow = false;
     this.bins = new Float64Array(32768 * 4); // per 15-bit bin: count, sumR, sumG, sumB
+    // Per bin, a Boyer-Moore majority vote over exact 24-bit colours: a flat area painted
+    // with one palette shade wins its bin, so median cut can keep that shade exact.
+    this.cand = new Int32Array(32768).fill(-1);
+    this.vote = new Float64Array(32768);
   }
 
   addPixels(rgba) {
@@ -28,12 +32,15 @@ export class PaletteBuilder {
       const k = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
       const o = k * 4;
       bins[o]++; bins[o + 1] += r; bins[o + 2] += g; bins[o + 3] += b;
+      if (this.cand[k] === c) this.vote[k]++;
+      else if (this.vote[k] === 0) { this.cand[k] = c; this.vote[k] = 1; }
+      else this.vote[k]--;
     }
   }
 
   build() {
     if (!this.exactOverflow) return exactPalette([...this.exact.keys()]);
-    return medianCutPalette(this.bins, 255);
+    return medianCutPalette(this.bins, 255, this.cand, this.vote);
   }
 }
 
@@ -44,11 +51,11 @@ function exactPalette(colors) {
   return new Palette(rgb, (r, g, b) => index.get((r << 16) | (g << 8) | b) ?? 0, true);
 }
 
-function medianCutPalette(bins, maxColors) {
+function medianCutPalette(bins, maxColors, cand = null, vote = null) {
   const entries = [];
   for (let k = 0; k < 32768; k++) {
     const n = bins[k * 4];
-    if (n > 0) entries.push({ n, r: bins[k * 4 + 1] / n, g: bins[k * 4 + 2] / n, b: bins[k * 4 + 3] / n });
+    if (n > 0) entries.push({ k, n, r: bins[k * 4 + 1] / n, g: bins[k * 4 + 2] / n, b: bins[k * 4 + 3] / n });
   }
   let boxes = entries.length ? [makeBox(entries)] : [];
   while (boxes.length < maxColors) {
@@ -64,10 +71,25 @@ function medianCutPalette(bins, maxColors) {
     boxes.splice(pick, 1, a, b);
   }
   const rgb = [[255, 255, 255]];
+  // Snap: when one exact colour is the clear majority of its box (a flat fill or a stroke
+  // body in one shade), that colour is used as-is instead of the box average, and those
+  // exact pixels map straight to it. Neighbouring shades then survive the GIF unchanged.
+  const snapColor = new Int32Array(32768).fill(-1);
+  const snapIndex = new Int16Array(32768);
   for (const bx of boxes) {
-    let n = 0, r = 0, g = 0, b = 0;
-    for (const e of bx.items) { n += e.n; r += e.r * e.n; g += e.g * e.n; b += e.b * e.n; }
-    rgb.push([Math.round(r / n), Math.round(g / n), Math.round(b / n)]);
+    let n = 0, r = 0, g = 0, b = 0, top = null;
+    for (const e of bx.items) {
+      n += e.n; r += e.r * e.n; g += e.g * e.n; b += e.b * e.n;
+      if (!top || e.n > top.n) top = e;
+    }
+    if (cand && top && cand[top.k] >= 0 && vote[top.k] * 2 >= top.n && top.n * 2 >= n) {
+      const c = cand[top.k];
+      snapColor[top.k] = c;
+      snapIndex[top.k] = rgb.length;
+      rgb.push([(c >> 16) & 255, (c >> 8) & 255, c & 255]);
+    } else {
+      rgb.push([Math.round(r / n), Math.round(g / n), Math.round(b / n)]);
+    }
   }
   const lut = new Int16Array(32768).fill(-1);
   const nearest = (r, g, b) => {
@@ -82,6 +104,7 @@ function medianCutPalette(bins, maxColors) {
   const map = (r, g, b) => {
     if (r === 255 && g === 255 && b === 255) return 0;
     const k = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    if (snapColor[k] === ((r << 16) | (g << 8) | b)) return snapIndex[k];
     let v = lut[k];
     if (v < 0) { v = nearest((r & 0xf8) | 4, (g & 0xf8) | 4, (b & 0xf8) | 4); lut[k] = v; }
     return v;

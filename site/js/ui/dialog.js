@@ -18,12 +18,14 @@ export function closeAllSheets() {
 }
 
 /**
- * openSheet({ title, body: Node, anchor?, onClose?, kind: "sheet" | "dialog", className, owner? })
+ * openSheet({ title, body: Node, anchor?, side?, onClose?, kind: "sheet" | "dialog", className, owner? })
+ * side (desktop only): an element to open beside, on its inline-start side (the canvas side of
+ * the RTL side panel), top-aligned with the anchor. Used by the shade chart popover.
  * owner: the screen that opened it; once owner.disposed is set, every input in the sheet
  * is swallowed and the sheet closes, so a stale sheet can never write data.
  * Returns { close, dialog }.
  */
-export function openSheet({ title, body, anchor = null, onClose, kind = "sheet", className = "", labelledTitle = true, owner = null }) {
+export function openSheet({ title, body, anchor = null, side = null, onClose, kind = "sheet", className = "", labelledTitle = true, owner = null }) {
   const titleId = "dlg-" + Math.random().toString(36).slice(2, 8);
   const popover = kind === "sheet" && anchor && isDesktop();
   const dialog = h("dialog", {
@@ -36,7 +38,8 @@ export function openSheet({ title, body, anchor = null, onClose, kind = "sheet",
     h("button", { class: "icon-btn sheet__close", type: "button", "aria-label": t("common.close"), onclick: () => close() }, iconEl("close")),
   );
   dialog.append(header, h("div", { class: "sheet__body" }, body));
-  const returnFocus = document.activeElement;
+  // A side popover always hands focus back to its toggle (a mouse click may not focus it).
+  const returnFocus = side && anchor ? anchor : document.activeElement;
   let closed = false;
   const entry = { close, owner };
   function close(result, { immediate = false } = {}) {
@@ -71,7 +74,8 @@ export function openSheet({ title, body, anchor = null, onClose, kind = "sheet",
   document.body.append(dialog);
   dialog.showModal();
   openSheets.add(entry);
-  if (popover) placePopover(dialog, anchor);
+  if (popover && side) placeBeside(dialog, anchor, side);
+  else if (popover) placePopover(dialog, anchor);
   return { close, dialog };
 }
 
@@ -85,6 +89,19 @@ function placePopover(dialog, anchor) {
   left = Math.max(margin, Math.min(left, innerWidth - d.width - margin));
   // right/bottom "auto": under dir=rtl the UA's inset for <dialog> would otherwise win over
   // "left" and pin every popover to the right edge, away from its anchor.
+  Object.assign(dialog.style, { position: "fixed", margin: "0", top: `${top}px`, left: `${left}px`, right: "auto", bottom: "auto" });
+}
+
+/** Beside `side`: right of it under RTL, left of it under LTR; top follows the anchor, clamped. */
+function placeBeside(dialog, anchor, side) {
+  const p = side.getBoundingClientRect();
+  const a = anchor.getBoundingClientRect();
+  const d = dialog.getBoundingClientRect();
+  const margin = 8;
+  const rtl = getComputedStyle(side).direction === "rtl";
+  let left = rtl ? p.right + margin : p.left - margin - d.width;
+  left = Math.max(margin, Math.min(left, innerWidth - d.width - margin));
+  const top = Math.max(margin, Math.min(a.top - 16, innerHeight - d.height - margin));
   Object.assign(dialog.style, { position: "fixed", margin: "0", top: `${top}px`, left: `${left}px`, right: "auto", bottom: "auto" });
 }
 

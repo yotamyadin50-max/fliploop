@@ -259,3 +259,41 @@ test("lessons match the plan table and the copy's derived counts", () => {
   const gaps = xs.slice(1).map((x, j) => x - xs[j]);
   assert.ok(gaps[0] < gaps[3] && gaps[7] < gaps[4]);
 });
+
+// ---- shade palette (_process/03d) ----
+import { SHADE_ROWS, SWATCHES, colorName } from "../site/js/editor/panels.js";
+import { FILL_TOLERANCE } from "../site/js/core/fill.js";
+const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+test("shade palette: 10 x 7, base colour in its own row, neighbours beyond fill tolerance", () => {
+  assert.equal(SHADE_ROWS.length, 10);
+  for (const r of SHADE_ROWS) {
+    assert.equal(r.cells.length, 7);
+    assert.ok(r.cells.includes(SWATCHES[r.base]), `row ${r.base} holds its base`);
+    for (let i = 1; i < 7; i++) {
+      const a = rgbOf(r.cells[i - 1]), b = rgbOf(r.cells[i]);
+      assert.ok(Math.max(...a.map((v, k) => Math.abs(v - b[k]))) > FILL_TOLERANCE, `${r.cells[i - 1]} vs ${r.cells[i]}`);
+    }
+  }
+  assert.equal(colorName("#0c45ab"), `${STRINGS["color.9"]} 6`);
+  assert.equal(colorName("#2F6BDB"), STRINGS["color.9"]);
+  assert.equal(colorName("#123456"), STRINGS["color.custom"]);
+});
+
+test("GIF median cut keeps every flat shade exact next to soft edges", () => {
+  const cells = SHADE_ROWS.flatMap((r) => r.cells).map(rgbOf);
+  const w = 480, h = 420, band = 6;
+  const frame = makeFrame(w, h, (x, y) => {
+    const b = Math.min(cells.length - 1, Math.floor(y / band));
+    const f = y % band;
+    let c = cells[b];
+    if (f < 2 && b > 0) { const t = (f + 1) / 3; c = c.map((v, k) => Math.round(v * t + cells[b - 1][k] * (1 - t))); }
+    if (Math.abs(x - y * 0.6) < 2) c = c.map((v) => Math.round(v * 0.5 + 15 + ((x * 7) % 11)));
+    return c;
+  });
+  const pb = new PaletteBuilder();
+  pb.addPixels(frame);
+  const pal = pb.build();
+  assert.equal(pal.exact, false);
+  for (const c of cells) assert.deepEqual(pal.rgb[pal.map(...c)], c);
+});

@@ -272,3 +272,32 @@ Before this pass, 844x390 had the stage 7 px over the tool row (25 px with inset
 **Test note:** the test browser's service worker serves the previous precache after a CSS edit until the version changes, and `?v=7` stays in the HTTP cache. Rebuild the manifest, then `Page.reload` with `ignoreCache: true` (or unregister the worker) before measuring. `Network.enable` plus `setCacheDisabled` wedged the runner once; avoid it.
 
 **Seen, not changed:** the first-session coach mark ("ציירו משהו") anchors above the canvas; in landscape it overlaps the top bar area for its few seconds until dismissed. On landscape phones with side insets the film strip and playbar stop at the inset (the `.app` padding from the PWA pass), rather than running edge to edge under the notch; that is safe and readable but a designer may want the film to bleed to the edges.
+
+## Shade palette pass (2026-09-30)
+
+Upstream: `_process/03d-web-designer-palette.md` (spec), `_process/05d-copywriter-palette-strings.md` (strings already in `strings.js`).
+
+| Area | Change |
+|---|---|
+| `editor/panels.js` | `SHADE_ROWS` pasted verbatim (10 x 7). `colorName()` now returns "כחול 6" for shades, the plain base name for a base cell, "צבע משלי" otherwise. `colorPanel(ed, {context})`: the 12 base swatches, 13th chip and "צבע אחר" unchanged; new "עוד גוונים" toggle. Phone/landscape (`context:"sheet"`): recent row + chart expand in place (`.reveal` 0fr to 1fr, `inert` while collapsed, `aria-expanded`, `settings.shadesOpen` persisted, `sheet--tall`, scrollIntoView after expanding, selected tile scrolled into view when the sheet opens expanded). Desktop (`context:"panel"`): full-width toggle opens the popover. Tiles: `aria-pressed`, `shade.aria` labels (base cell = hue name), `title` = `shade.name`, one roving `tabindex=0`, arrows follow the screen (ArrowLeft = darker under RTL, swapped under LTR), Up/Down rows, Home/End, Ctrl+Home/End, no wrap. Strips are `role=group` with the hue name; the chart is a group "כל הגוונים"; recent row labelled by its caption "בחרתם לאחרונה" |
+| `ui/dialog.js` | `openSheet({ side })`: new `placeBeside()` for the desktop popover: `left = panel.right + 8` (RTL) / `panel.left - 8 - w` (LTR), `top = clamp(8, toggle.top - 16, innerHeight - h - 8)`, `right/bottom:auto`. It is still a registered sheet, so the route change's `closeAllSheets()` closes it (Back verified). A side popover returns focus to its toggle |
+| `editor/editor.js` | `recentColor` removed. `recentColors` / `shadesOpen` read from settings; `setColor(hex)` uppercases and records every non-base pick (tiles, recent chips, "צבע אחר"); `openShadesPopover()`; colors sheet opens with `sheet--tall` when expanded |
+| `store/settings.js` | `recentColors: []` (max 7, newest first, no duplicates) and `shadesOpen: false` in defaults; `rememberColor()`; on load the list is normalized and a legacy single `recentColor` value (if one was ever stored) is folded in and dropped |
+| `ui/icons.js` | `chevron` (spec path) |
+| `style.css` | Spec CSS (tokens `--shade/--shade-h`, toggle, reveal, strips, base pip, selected ring, hover, focus, landscape two-column 284 + 308 with sticky start column, `.sheet.sheet--tall` (needed the extra class to beat `.sheet`'s 70dvh), popover slide-in from the panel side). Strips use `:first-child/:last-child` because each strip is its own group element |
+| `gif/encoder.js` | Median cut now keeps a flat shade exact: a per-bin Boyer-Moore majority vote picks the dominant 24-bit colour, and a box whose top bin is a clear majority uses that exact colour (and maps those pixels straight to it) instead of the box average. Exact-palette path unchanged |
+| Cache | `?v=8`, `sw.js` regenerated (193c89fdf674, 64 files) |
+
+**Deviation, flagged:** the desktop popover is 258px, not 256: the popover has a 1px border each side, and at 256 the 7 x 32 strip overflowed the body's 16px padding by 2px. Measured at 258: 16px padding both sides.
+
+**Verified live** (headless Chrome, `tools/run.mjs`, screenshots opened: 375x812 collapsed/expanded/after reload, 360x740, 812x375, 1024x768, 1280x800):
+- 375x812: collapsed sheet 228px (276 with the 13th chip, same as before); expanded `sheet--tall` 698px, body scrolls, tiles 44x44, 7 per row, no wrap. 360x740: tiles x 36..344. 812x375 and 640x360: two columns `284px 308px`. Document `scrollWidth` = viewport at every size.
+- Picked blue 6 (#0C45AB): sheet closes, color key "הצבע הנוכחי: כחול 6". Drew a rectangle with it, picked blue 7 (#00256F), filled inside: interior #00256F, outline still #0C45AB, outside transparent (no leak between adjacent shades). After reload the frame pixel is still #00256F, recent row = [#00256F, #0C45AB], 13th chip = #00256F. `shadesOpen` survives reload in both states.
+- Keyboard (RTL): from row 1 step 1, ArrowLeft x2 then ArrowDown = row 2 step 3 (visually further left); End = step 7; Ctrl+End then Down/Left stays at 10/7; Ctrl+Home = 1/1; exactly one `tabindex=0`.
+- Desktop: popover at x = panel.right + 8 (264), 1280x800 top 297 unclamped, 1024x700 clamped to bottom 692; tiles 32x32; focus lands on the pressed tile; pick closes it, focus back on the toggle, panel base grid and 13th chip re-rendered; Esc and X close with focus on the toggle; Back closes both the phone sheet and the popover (0 dialogs left).
+- Reduced motion: `.reveal`, `.sheet--tall` and the chevron all resolve to `transition-property: opacity, color, background-color` (global block).
+- GIF: 3 frames with 28 adjacent shades (4 rows) plus an anti-aliased stroke and text (forces median cut): decoded shade cells exact (max channel error 0; 5 only where the moving black stroke crossed a sample point). Scratch stress test (70 shades with 2-row soft blends): old encoder worst error 5, new 0.
+
+**Regression:** `node tools/build-sw-manifest.mjs --check` up to date; `node tests/core.test.mjs` 17/17 (2 new: palette structure + neighbours > fill tolerance 32 + `colorName`; median cut keeps 70 shades exact); `selfTest({count:12})` gif, gifHalf, video, pdfA4, pdfLetter, pdfJpeg, pngA4 all ok; console 0 errors over the sweep (capture confirmed with a probe).
+
+**Seen, not changed:** the first-session coach toast ("הוסיפו פריים...") can sit over the lower edge of the desktop popover for its few seconds. The current color is not persisted across reloads (existing behaviour), so after a reload no tile is pressed until a pick.

@@ -38,6 +38,7 @@ const P = {
   check: "M5.2 12.4l4.3 4.3 9.3-9.5",
   clear: "M5 5.2h14v13.9H5z M9 9.1l6 5.9 M15 9 9 15",
   size: "M4 6h16v12.1H4z M8 10h8v4.1H8z",
+  chevron: "M6.2 9.3l5.8 5.9 5.9-5.8", // points down; rotated by CSS (up when open, toward the popover on desktop)
 };
 
 const FILLED = {

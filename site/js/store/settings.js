@@ -12,7 +12,25 @@ const DEFAULT_SETTINGS = {
   persistGranted: false,
   printPaper: "A4",
   w1DismissedAt: null,
+  recentColors: [], // uppercase hex, newest first, max RECENT_MAX, never a base swatch
+  shadesOpen: false, // phone colors sheet: shade chart expanded
 };
+export const RECENT_MAX = 7;
+const HEX = /^#[0-9A-F]{6}$/;
+
+/** Clean list: valid uppercase hex, no duplicates, at most RECENT_MAX. Folds in the
+ *  pre-palette single `recentColor` value if an older build ever stored one. */
+function normalizeRecent(s) {
+  const raw = [...(Array.isArray(s.recentColors) ? s.recentColors : []), ...(typeof s.recentColor === "string" ? [s.recentColor] : [])];
+  const out = [];
+  for (const c of raw) {
+    const up = typeof c === "string" ? c.toUpperCase() : "";
+    if (HEX.test(up) && !out.includes(up)) out.push(up);
+  }
+  delete s.recentColor;
+  s.recentColors = out.slice(0, RECENT_MAX);
+  return s;
+}
 const DEFAULT_PROGRESS = { lessonsDone: {}, challengeWeeks: [] };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -21,7 +39,7 @@ let dbOk = true;
 
 export async function loadSettings() {
   try {
-    settings = { ...DEFAULT_SETTINGS, ...((await getMeta("settings")) || {}) };
+    settings = normalizeRecent({ ...DEFAULT_SETTINGS, ...((await getMeta("settings")) || {}) });
     progress = { ...structuredClone(DEFAULT_PROGRESS), ...((await getMeta("progress")) || {}) };
   } catch (err) {
     dbOk = false;
@@ -57,6 +75,14 @@ export async function updateProgress(mutator) {
   } catch (err) {
     console.warn("Progress write failed", err);
   }
+}
+
+/** Moves hex to the front of recentColors (the caller skips base swatches). */
+export function rememberColor(hex) {
+  const up = hex.toUpperCase();
+  const list = [up, ...(settings.recentColors || []).filter((c) => c !== up)].slice(0, RECENT_MAX);
+  if (list.join() === (settings.recentColors || []).join()) return Promise.resolve();
+  return updateSettings({ recentColors: list });
 }
 
 export function lessonsDoneCount() {

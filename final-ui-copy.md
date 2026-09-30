@@ -230,6 +230,18 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `color.12` | חום | #8A5A3B |
 | `color.custom` | צבע משלי | `{colorName}` for a custom color |
 
+**Shade palette (added 2026-09-30, spec `_process/03d`).** Hue names reuse `color.2` and `color.4..12`; all ten are masculine, so the tone words agree. `{n}` is a digit 1 to 7 in a `.num` isolate.
+
+| Key | Hebrew | Notes |
+|---|---|---|
+| `colors.shades.more` | עוד גוונים | Toggle label, phone and desktop. Noun label beside "צבע אחר"; state comes from `aria-expanded` |
+| `colors.shades.title` | כל הגוונים | Desktop popover title, and the palette group's aria-label |
+| `colors.shades.recent` | בחרתם לאחרונה | Caption above the recent row, and that row's group aria-label. Not "אחרונים": inside a light-to-dark chart that reads as "the last (darkest) shades" |
+| `shade.name` | {colorName} {n} | Tooltip and `colorName()` result for a non-base tile ("כחול 6"); tool key reads "צבע: כחול 6". Base cell uses the plain hue name |
+| `shade.aria` | {colorName} {tone}, גוון {n} מתוך 7 | Tile aria-label ("כחול כהה, גוון 6 מתוך 7"). Base cell's label is the plain hue name |
+| `shade.tone.light` | בהיר | `{tone}` for steps before the base |
+| `shade.tone.dark` | כהה | `{tone}` for steps after the base |
+
 ---
 
 ## 9. Film strip and frame menu
