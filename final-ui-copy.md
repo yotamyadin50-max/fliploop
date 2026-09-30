@@ -57,6 +57,10 @@
 | `manifest.description` | ציירו פריים אחרי פריים ותראו את הציור זז. | |
 | `manifest.shortcut.new` | אנימציה חדשה | → `#/new` |
 | `manifest.shortcut.challenge` | האתגר של השבוע | → `#/challenge` (the plan wrote "האתגר השבועי"; aligned with the Home button so the same thing has one name) |
+| `manifest.screenshot.narrowHome` | ציירו כמה פריימים ותראו אותם זזים | Install-dialog screenshot label, phone, Home (PWA pass) |
+| `manifest.screenshot.narrowEditor` | עורך האנימציה עם רצועת הפריימים | Phone, Editor |
+| `manifest.screenshot.wideEditor` | עורך האנימציה במחשב | Wide, Editor |
+| `manifest.screenshot.wideHome` | שולחן האור של FlipLoop | Wide, Home |
 
 ---
 
@@ -99,6 +103,8 @@
 |---|---|---|
 | `home.nav.gallery` | העבודות שלי | Header link, left |
 | `home.nav.settings` | שמירה והגדרות | Header link, left |
+| `home.nav.install` | להתקין | Header link at the start, shown only while the browser offers install (PWA pass) |
+| `home.nav.install.aria` | להתקין את FlipLoop | |
 | `home.h1` | FlipLoop | Display H1 |
 | `home.subtitle` | ציירו כמה דפים ותראו אותם זזים. בלי הרשמה. | Muted subtitle. Uses "דפים" (the flipbook's pages), not "פריימים", because "פריים" is taught at coach mark 2 |
 | `home.cta.new` | אנימציה חדשה | Primary, → `#/new` |
@@ -685,6 +691,24 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 
 ---
 
+## 21b. Install and updates (PWA pass, 2026-09-30)
+
+Settings card between Storage and Help. Only one of the three state lines shows: the button when the browser offers install, the iPhone line on iOS Safari, the menu line anywhere else. The whole card is replaced by `install.installed` when FlipLoop already runs as an installed app.
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+| `install.h2` | התקנה | Settings card heading |
+| `install.lead` | התקינו את FlipLoop וציירו גם בלי אינטרנט. | Muted line under the heading |
+| `install.button` | להתקין את FlipLoop | Secondary button, opens the browser's install dialog |
+| `install.ios` | באייפון ובאייפד: לחצו על שיתוף ובחרו "הוספה למסך הבית". | iOS Safari only (no install API). "הוספה למסך הבית" is the iOS menu item's own Hebrew name |
+| `install.menu` | פתחו את תפריט הדפדפן ובחרו התקנה או הוספה למסך הבית. | Browsers with no install prompt right now |
+| `install.installed` | FlipLoop מותקן במכשיר הזה ועובד גם בלי אינטרנט. | Instead of the card body, in the installed app |
+| `install.done` | FlipLoop הותקן | Toast after a successful install |
+| `update.ready` | יש גרסה חדשה של FlipLoop | Toast when a new version is ready, with `update.action` |
+| `update.action` | לרענן | Toast action, loads the new version |
+
+---
+
 ## 22. Toasts (index, one place to find them all)
 
 | Key | Hebrew | Trigger |
@@ -708,6 +732,8 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 | `import.done.*` | (see §20) | §20 |
 | `backup.done` | הגיבוי ירד: {filename} | §20 |
 | `settings.tips.done` | הטיפים יופיעו שוב בפעם הבאה שתציירו | §21 |
+| `install.done` | FlipLoop הותקן | §21b |
+| `update.ready` | יש גרסה חדשה של FlipLoop | §21b, with `update.action` |
 
 ---
 

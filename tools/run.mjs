@@ -3,7 +3,9 @@
 import { createServer } from "node:http";
 import { launch, out, SCRATCH } from "./cdp.mjs";
 
-const cdp = await launch({ profile: `${SCRATCH}/cdp-profile` });
+// CDP_PROFILE: a short path. Chrome's CacheStorage files nest deep, and a long profile path
+// passes Windows MAX_PATH, which breaks caches.open() (and so any service worker install).
+const cdp = await launch({ profile: process.env.CDP_PROFILE || `${SCRATCH}/cdp-profile` });
 await cdp.downloadsTo(`${SCRATCH}/downloads`);
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");

@@ -10,13 +10,28 @@ import { listProjects } from "../store/projects.js";
 import { weekInfo } from "../core/challenge.js";
 import { THEMES } from "../data/themes.js";
 import { w1Banner } from "../ui/warnings.js";
+import { installState, onInstallChange, promptInstall } from "../pwa.js";
+
+/** Home only: shown while the browser offers install; hidden once installed. */
+function installLink() {
+  const btn = h("button", { class: "nav-link nav-link--install", type: "button", "aria-label": t("home.nav.install.aria"), onclick: () => promptInstall() },
+    iconEl("install", { size: 22 }), h("span", {}, t("home.nav.install")));
+  const sync = () => { btn.hidden = installState() !== "prompt"; };
+  sync();
+  btn.dispose = onInstallChange(sync);
+  return btn;
+}
 
 export function siteHeader({ home = false } = {}) {
-  return h("header", { class: "site-header" },
+  const install = home ? installLink() : null;
+  const header = h("header", { class: "site-header" },
     h("a", { class: "wordmark", href: "#/", hidden: home }, "FlipLoop"),
+    install,
     h("nav", { class: "site-header__nav" },
       h("a", { class: "nav-link", href: "#/gallery" }, iconEl("gallery", { size: 22 }), h("span", {}, t("home.nav.gallery"))),
       h("a", { class: "nav-link", href: "#/settings" }, iconEl("settings", { size: 22 }), h("span", {}, t("home.nav.settings")))));
+  header.dispose = () => install?.dispose();
+  return header;
 }
 
 export class HomeScreen {
@@ -33,8 +48,9 @@ export class HomeScreen {
     const art = h("div", { class: "home__table", html: lightTableSvg() });
     const w1Slot = h("div", { class: "home__w1" });
     this.continueSlot = h("div", { class: "home__continue" });
+    this.header = siteHeader({ home: true });
     this.section.append(
-      siteHeader({ home: true }),
+      this.header,
       h("div", { class: "page home" },
         h("div", { class: "home__text" },
           h("h1", { class: "display" }, t("home.h1")),
@@ -66,5 +82,6 @@ export class HomeScreen {
   unmount() {
     this.disposed = true;
     this.stopFlip?.();
+    this.header?.dispose();
   }
 }

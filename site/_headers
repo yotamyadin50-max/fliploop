@@ -1,0 +1,33 @@
+# Netlify response headers (PWA pass). Paths are from the site root.
+# Never give one path two Cache-Control rules: Netlify merges matching rules.
+
+# The service worker must always be re-checked, or updates stall behind the HTTP cache.
+/sw.js
+  Cache-Control: no-cache
+  Content-Type: text/javascript; charset=utf-8
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: no-cache
+
+# The app shell document: always revalidated (the service worker serves it offline).
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+
+# Code and styles have stable names (no content hash), so they revalidate every time.
+# Cheap: Netlify answers 304 from its ETag, and the service worker serves them anyway.
+/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Icons and images change rarely: one day fresh, then revalidate.
+/assets/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

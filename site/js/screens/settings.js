@@ -8,6 +8,7 @@ import { screenHeader } from "./common.js";
 import { estimate, refreshPersisted } from "../store/storage.js";
 import { getSettings, resetTips } from "../store/settings.js";
 import { importButton, runBackup } from "./gallery.js";
+import { installState, onInstallChange, promptInstall } from "../pwa.js";
 
 export class SettingsScreen {
   constructor(section, router) {
@@ -30,6 +31,7 @@ export class SettingsScreen {
           h("div", { class: "row-actions" },
             h("button", { class: "btn btn--secondary", type: "button", onclick: async () => { await runBackup(); this.renderStorage(); } }, iconEl("download"), t("settings.backup")),
             importButton(t("settings.import"), () => this.renderStorage()))),
+        this.installCard = h("section", { class: "card install" }),
         h("section", { class: "card" }, h("h2", { class: "h3" }, t("settings.help.h2")),
           h("button", { class: "btn btn--secondary", type: "button", onclick: async () => { await resetTips(); toast(t("settings.tips.done")); } }, t("settings.tips.reset")),
           h("p", { class: "muted" }, t("settings.undoNote")),
@@ -38,7 +40,27 @@ export class SettingsScreen {
           h("p", { class: "about__name" }, t("settings.about.name")),
           h("p", {}, t("settings.about.privacy")),
           h("p", { class: "muted" }, before, h("i", { dir: "ltr", lang: "en" }, title), after))));
+    this.renderInstall();
+    this.offInstall = onInstallChange(() => this.renderInstall());
     await this.renderStorage();
+  }
+
+  /** Install card (PWA pass): one state line; the button only when the browser offers install. */
+  renderInstall() {
+    const state = installState();
+    clear(this.installCard);
+    this.installCard.append(h("h2", { class: "h3" }, t("install.h2")));
+    if (state === "installed") {
+      this.installCard.append(h("p", { class: "protected install__state" }, iconEl("check", { size: 20 }), h("span", {}, t("install.installed"))));
+      return;
+    }
+    this.installCard.append(h("p", { class: "muted install__state" }, t("install.lead")));
+    if (state === "prompt") {
+      this.installCard.append(h("div", { class: "row-actions" },
+        h("button", { class: "btn btn--secondary", type: "button", onclick: () => promptInstall() }, iconEl("install"), t("install.button"))));
+    } else {
+      this.installCard.append(h("p", { class: "install__state" }, t(state === "ios" ? "install.ios" : "install.menu")));
+    }
   }
 
   async renderStorage() {
@@ -66,5 +88,6 @@ export class SettingsScreen {
 
   unmount() {
     this.disposed = true;
+    this.offInstall?.();
   }
 }

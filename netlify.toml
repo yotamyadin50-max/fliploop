@@ -1,0 +1,3 @@
+# FlipLoop on Netlify: a static site, no build step. Headers live in site/_headers.
+[build]
+  publish = "site"

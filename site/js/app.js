@@ -17,6 +17,7 @@ import { EditorScreen } from "./editor/editor.js";
 import { showW2b } from "./ui/warnings.js";
 import { toast } from "./ui/toast.js";
 import { closeAllSheets } from "./ui/dialog.js";
+import { registerServiceWorker, swVersion } from "./pwa.js";
 
 const SCREENS = {
   home: HomeScreen,
@@ -159,10 +160,13 @@ async function boot() {
   window.__fliploop = {
     router,
     version: 1,
+    swVersion,
     // Scripted export check for QA (Chrome and Playwright WebKit); loaded only when called.
     selfTest: async (options) => (await import("./dev/selftest.js")).run(options),
   };
   await router.go();
+  // After the first screen is up, so the worker's precache never competes with first paint.
+  registerServiceWorker();
 }
 
 boot();

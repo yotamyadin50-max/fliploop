@@ -41,6 +41,7 @@
     --strip-h: 72px; --cell-w: 72px; --thumb-w: 64px; --thumb-h: 48px;
     --hole-w: 6px; --hole-h: 8px; --hole-pitch: 12px; --tool: 48px; --topbar: 48px; --playbar: 56px;
     --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px); --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
     --holes: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Crect x='3' y='0' width='6' height='8' rx='1.5' fill='%23DAD6CC'/%3E%3C/svg%3E");
   }
 }
@@ -72,8 +73,10 @@
 /* ============ components ============ */
 @layer components {
   /* ---- shell ---- */
-  .app { min-height: 100dvh; }
-  .screen { min-height: 100dvh; display: flex; flex-direction: column; }
+  /* Safe areas (notch, home indicator, landscape side insets), mostly visible in the installed app.
+     env() insets are physical, so these stay physical on purpose. */
+  .app { min-height: 100dvh; padding: var(--safe-t) var(--safe-r) 0 var(--safe-l); }
+  .screen { min-height: calc(100dvh - var(--safe-t)); display: flex; flex-direction: column; }
   .page { width: 100%; max-width: 1120px; margin-inline: auto; padding: var(--s-24) var(--s-16) var(--s-48); display: flex; flex-direction: column; gap: var(--s-16); }
   .pad { padding: var(--s-16); }
   @media (min-width: 768px) { .page { padding-inline: var(--s-24); } }
@@ -82,7 +85,13 @@
   .site-header { display: flex; align-items: center; justify-content: space-between; gap: var(--s-8); min-height: 56px; padding: 0 var(--s-8); max-width: 1120px; width: 100%; margin-inline: auto; }
   .site-header__nav { display: flex; gap: var(--s-4); margin-inline-start: auto; }
   .wordmark { font: 700 1.5625rem/1 var(--font-wordmark); text-decoration: none; padding: var(--s-8); }
-  .wordmark[hidden] { display: none; }
+  .wordmark[hidden], .nav-link[hidden] { display: none; }
+  /* Install link (PWA pass): icon only on narrow phones, so the three Home links stay one line each. */
+  .nav-link { white-space: nowrap; }
+  @media (max-width: 419px) {
+    .nav-link--install span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+  @media (max-width: 359px) { .site-header .nav-link--install { display: none; } } /* no room; Settings still offers install */
   .site-header--screen .wordmark { margin-inline-start: auto; }
   .nav-link, .back { display: inline-flex; align-items: center; gap: var(--s-4); min-height: 44px; min-width: 44px; padding: 0 var(--s-8); border-radius: var(--r-control); text-decoration: none; font-weight: 500; font-size: .9375rem; }
   .nav-link:hover, .back:hover { background: var(--glow-hover); }
@@ -156,7 +165,7 @@
   }
 
   /* ---- editor shell ---- */
-  .screen--editor { height: 100dvh; min-height: 0; overflow: hidden; }
+  .screen--editor { height: calc(100dvh - var(--safe-t)); min-height: 0; overflow: hidden; }
   .editor-loading { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--s-16); padding-top: var(--s-16); text-align: center; }
   .skeleton-strip { display: flex; gap: 8px; height: var(--strip-h); padding: 12px 8px; background: var(--film) var(--holes) repeat-x 0 0 / 12px 8px; overflow: hidden; }
   .skeleton-cell { flex: 0 0 64px; height: 48px; border-radius: 2px; background: #2E2A25; animation: skeleton 1.2s ease-in-out infinite alternate; }
@@ -388,7 +397,7 @@
   .sheet__title { flex: 1; font-size: 1.125rem; font-weight: 500; padding-top: 6px; }
   .sheet__close { flex: 0 0 auto; }
   .sheet__body { padding: var(--s-8) var(--s-16) calc(var(--s-24) + var(--safe-b)); overflow-y: auto; }
-  .sheet--sheet { position: fixed; inset: auto 0 0 0; margin: 0; width: 100%; max-width: 100%; border-radius: var(--r-sheet) var(--r-sheet) 0 0; animation: sheet-in var(--t-sheet) var(--ease-enter); }
+  .sheet--sheet { position: fixed; inset: auto 0 0 0; margin: 0; width: 100%; max-width: 100%; padding-left: var(--safe-l); padding-right: var(--safe-r); border-radius: var(--r-sheet) var(--r-sheet) 0 0; animation: sheet-in var(--t-sheet) var(--ease-enter); }
   .sheet--sheet.sheet--closing { animation: sheet-out 200ms var(--ease-exit) forwards; }
   @keyframes sheet-in { from { transform: translateY(100%); } }
   @keyframes sheet-out { to { transform: translateY(100%); } }
@@ -408,7 +417,7 @@
   .field { display: flex; flex-direction: column; gap: var(--s-8); align-items: flex-start; }
 
   /* ---- toasts ---- */
-  .toasts { position: fixed; z-index: 50; inset-inline: var(--s-16); bottom: calc(var(--s-16) + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: var(--s-8); pointer-events: none; }
+  .toasts { position: fixed; z-index: 50; left: calc(var(--s-16) + var(--safe-l)); right: calc(var(--s-16) + var(--safe-r)); bottom: calc(var(--s-16) + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: var(--s-8); pointer-events: none; }
   /* Above the film strip, not just the playback bar, so a toast never hides the strip. */
   body:has(.editor) .toasts { bottom: calc(var(--playbar) + var(--strip-h) + var(--safe-b) + 8px); }
   .toast { position: relative; overflow: hidden; pointer-events: auto; display: flex; align-items: center; gap: var(--s-8); max-width: 420px; width: 100%; padding-block: 10px; padding-inline: var(--s-16) var(--s-8); border-radius: var(--r-control); background: var(--film); color: var(--on-film); font-size: 15px; line-height: 1.4; box-shadow: var(--shadow-lift); animation: fade-in 200ms var(--ease-enter); }
@@ -465,7 +474,7 @@
   .export__error { color: var(--ink); }
   .export__error .icon { color: var(--error); }
   @media (max-width: 767px) {
-    .export { position: fixed; inset: 16px 0 0 0; margin: 0; width: 100%; max-width: 100%; height: calc(100dvh - 16px); border-radius: var(--r-sheet) var(--r-sheet) 0 0; }
+    .export { position: fixed; inset: 16px 0 0 0; margin: 0; width: 100%; max-width: 100%; padding-left: var(--safe-l); padding-right: var(--safe-r); height: calc(100dvh - 16px); border-radius: var(--r-sheet) var(--r-sheet) 0 0; }
   }
   @media (min-width: 768px) { .export { width: 560px; } }
 
@@ -578,6 +587,7 @@
 
   /* ---- settings ---- */
   .settings .card { gap: 12px; }
+  .install__state { margin: 0; }
   .meter { height: 12px; border-radius: 6px; background: var(--desk-rim); overflow: hidden; }
   .meter__fill { display: block; height: 100%; background: var(--ink); }
   .meter--warn .meter__fill { background: var(--warn-text); }
