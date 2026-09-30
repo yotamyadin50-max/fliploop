@@ -3,6 +3,8 @@
 **תאריך:** 29.9.2026 · **מצב:** עבר את כל השערים (Gatekeeper APPROVED, Critic ללא ממצא Major פתוח)
 
 ## קישורים
+- **קישור קבוע (עובד תמיד, https):** https://yotamyadin50-max.github.io/fliploop/
+- **קוד:** https://github.com/yotamyadin50-max/fliploop (ציבורי, כל push ל-main מעדכן את האתר אוטומטית)
 - **במחשב:** http://localhost:5178/
 - **בטלפון (אותה רשת Wi-Fi):** http://192.168.1.97:5180/
 - הקבצים: `O-output/40-fliploop/site/`
