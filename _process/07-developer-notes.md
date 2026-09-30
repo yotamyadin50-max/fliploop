@@ -226,3 +226,49 @@ Cache-busting bumped to `?v=6`.
 **Found, not fixed (pre-existing, now more reachable):** on a phone in landscape (844x390) the Editor keeps its 240 px minimum stage width (`fitStage`, mobile branch), so the stage overlaps the tool row by about 7 px (25 px with side insets). `orientation: "any"` makes landscape phones reachable in the installed app, so this deserves a small layout pass (a landscape phone layout, or letting the floor drop when the stage is height-bound). Tablets and desktops are fine.
 
 **Revision discipline:** `siteHeader()` has one caller (Home); it now returns the header with a `dispose()` that Home's `unmount()` calls. `SettingsScreen` gains `renderInstall()` and unsubscribes on unmount. `toast()` is used unchanged (`id`, `persistent`, `action`). The CSS edits are scoped: shell padding (0 when there is no inset), editor height, sheet/export/toast side insets, and the new `.nav-link--install` / `.install__state` rules.
+
+## Landscape pass (2026-09-30): Editor on landscape phones, tablets re-checked
+
+Closes the "found, not fixed" item from the PWA pass (stage over the tool row on a landscape phone).
+
+**What changed**
+
+| Area | Change |
+|---|---|
+| `fitStage()` (`editor.js`) | Dropped the 240 px minimum stage width on phones and tablets. It only ever acted when the region was height-bound, and then it pushed the stage over the tool row. Now a plain fit: `min(region width, region height x aspect)`. Desktop steps (2x/1.5x/1.25x/1x) unchanged |
+| Landscape phone layout (`style.css`) | New block `@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)`. `.editor__body` becomes a grid `"rail canvas"`: the tool keys form a compact 44x44 key grid at the start side (3 columns, 3 rows; 2 columns, 4 rows from 400 px tall), the canvas fills the rest height-bound. Strip and playback stay full width below. Playback bar 48 px instead of 56 in this layout (Play is 48, every other control 44) |
+| Lessons in landscape | The section becomes a grid; the goal strip moves out of the column into a side card at the end side (width `minmax(168px, 22vw)`): chip + counter on row 1, goal text wrapping, then the "התרגיל" button, then the hints switch. Scrolls inside itself only as a last resort (never needed at the tested sizes) |
+| Cache-busting | `?v=7`; `sw.js` regenerated (version `fb7ae3e94ecb`, 64 files) |
+
+Portrait phones, portrait tablets (768/820 wide) and everything 1024+ do not match the new query, so their layout is untouched.
+
+**Measurements** (headless Chrome 152, `tools/run.mjs`, mobile emulation; "insets" = `Emulation.setSafeAreaInsetsOverride` 47 left/right + 21 bottom in landscape, 47 top + 34 bottom in portrait). Each row checked free 4:3, free square, lesson 1, lesson 2 (hints switch) and a challenge project: stage vs tool keys (including the 8 px halo), strip, goal card and top bar never intersect; no horizontal or vertical page scroll; playbar bottom inside the viewport; every tool key on screen.
+
+| Viewport | Insets | Stage 4:3 | Stage square | Tool grid | Goal card (lesson 1 / hints) | Overlaps |
+|---|---|---|---|---|---|---|
+| 667x375 | no | 242x182 | 182x182 | 140x140 | 152x112 / 152x150 | 0 |
+| 667x375 | yes | 214x161 | 161x161 | 140x140 | 152x112 / 152x150 | 0 |
+| 740x360 | no | 222x167 | 167x167 | 140x140 | 152x112 / 152x150 | 0 |
+| 740x360 | yes | 194x146 | 146x146 | 140x140 | 152x112 / 152x150 | 0 |
+| 812x375 | no | 242x182 | 182x182 | 140x140 | 163x112 / 163x150 | 0 |
+| 812x375 | yes | 214x161 | 161x161 | 140x140 | 163x112 / 163x150 | 0 |
+| 844x390 | no | 262x196 | 197x197 | 140x140 | 170x93 / 170x131 | 0 |
+| 844x390 | yes | 234x176 | 176x176 | 140x140 | 170x93 / 170x131 | 0 |
+| 926x428 | no | 313x235 | 235x235 | 92x188 | 188x93 / 188x131 | 0 |
+| 926x428 | yes | 285x214 | 214x214 | 92x188 | 188x93 / 188x131 | 0 |
+| 1024x768 | no | 600x450 | 540x540 | rail 72 | top strip | 0 |
+| 768x1024 | no | 736x552 | 736x736 | row 56 | top strip | 0 |
+| 1180x820 | no | 720x540 | 540x540 | rail 72 | top strip | 0 |
+| 820x1180 | no | 788x591 | 788x788 | row 56 | top strip | 0 |
+| 375x667 | no | **343x257** | 343x343 | row 56 | strip 66/68 | 0 |
+| 375x812 | no / yes | 343x257 | 343x343 | row 56 | strip 66/68 | 0 |
+| 360x740 | no | 328x246 | 328x328 | row 56 | strip 66/68 | 0 |
+| 1280x800 | no | 720x540 (lesson 600x450) | 540x540 | rail 72 | strip + steps card | 0 |
+
+Before this pass, 844x390 had the stage 7 px over the tool row (25 px with insets). The portrait and desktop numbers match the earlier notes (343x257 at 375x667; lesson 600x450 at 1280x800). A live rotation (375x812 lesson, then 812x375, then back, no reload) re-fits through the existing ResizeObserver: 242x182 in landscape, 343x257 back in portrait. Screenshots opened: 812x375 and 740x360 hints lesson, 667x375 hints lesson with insets, 926x428 free, 740x360 square with insets.
+
+**Regression:** `node tools/build-sw-manifest.mjs --check` up to date; `node tests/core.test.mjs` 15/15; `selfTest({count:12})` gif, gifHalf, video, pdfA4, pdfLetter, pdfJpeg, pngA4 all ok; console 0 errors over the sweep (capture confirmed with a `console.error` probe), `fliploop-errors` empty.
+
+**Test note:** the test browser's service worker serves the previous precache after a CSS edit until the version changes, and `?v=7` stays in the HTTP cache. Rebuild the manifest, then `Page.reload` with `ignoreCache: true` (or unregister the worker) before measuring. `Network.enable` plus `setCacheDisabled` wedged the runner once; avoid it.
+
+**Seen, not changed:** the first-session coach mark ("ציירו משהו") anchors above the canvas; in landscape it overlaps the top bar area for its few seconds until dismissed. On landscape phones with side insets the film strip and playbar stop at the inset (the `.app` padding from the PWA pass), rather than running edge to edge under the notch; that is safe and readable but a designer may want the film to bleed to the edges.

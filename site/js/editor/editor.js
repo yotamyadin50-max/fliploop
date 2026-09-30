@@ -322,9 +322,9 @@ export class EditorScreen {
     if (isDesktop()) {
       const steps = [2, 1.5, 1.25, 1].map((s) => s * this.doc.width).filter((sw) => sw <= w + 0.5);
       if (steps.length) w = steps[0];
-    } else {
-      w = Math.max(Math.min(240, r.width), w);
     }
+    // Phones and tablets: plain fit, no 240px floor. The floor only ever acted when the region
+    // was height-bound, and then it pushed the stage over the tool row (landscape phones).
     this.stage.el.style.width = `${Math.floor(w)}px`;
     this.stage.el.style.height = `${Math.floor(w / aspect)}px`;
   }

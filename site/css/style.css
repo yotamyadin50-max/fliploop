@@ -342,6 +342,36 @@
     .tool-key { height: 48px; }
     .tool-key__label { display: none; }
   }
+  /* Landscape phone (installed app, orientation "any"): the height is the scarce axis, so the
+     tool row becomes a compact key grid at the start side and the canvas takes the rest of the
+     row, height-bound. Lessons move the goal strip to a side card at the end side. Strip and
+     playback stay full width below. */
+  @media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px) {
+    .screen--editor { --playbar: 48px; } /* Play is 48 tall, every other control 44 */
+    .editor__body { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "rail canvas"; gap: var(--s-16); padding: var(--s-8) var(--s-16); }
+    .editor__canvas { grid-area: canvas; padding: 0; min-width: 0; }
+    .tools { grid-area: rail; padding: 0; align-self: center; }
+    .tools__row { display: grid; grid-template-columns: repeat(3, 44px); gap: 4px; }
+    .tool-key { width: 44px; height: 44px; }
+    .editor--lesson { display: grid; grid-template-columns: minmax(0, 1fr) minmax(168px, 22vw); grid-template-rows: auto auto auto minmax(0, 1fr) auto auto; }
+    .editor--lesson > .topbar { grid-area: 1 / 1 / 2 / -1; }
+    .editor--lesson > .w2-strip { grid-area: 2 / 1 / 3 / -1; }
+    .editor--lesson > .w3-strip { grid-area: 3 / 1 / 4 / -1; }
+    .editor--lesson > .editor__body { grid-area: 4 / 1 / 5 / 2; min-width: 0; }
+    .editor--lesson > .goal-strip { grid-area: 4 / 2 / 5 / 3; }
+    .editor--lesson > .frames { grid-area: 5 / 1 / 6 / -1; }
+    .editor--lesson > .playbar { grid-area: 6 / 1 / 7 / -1; }
+    .goal-strip, .goal-strip--hints { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "chip prog" "goal goal" "steps steps" "switch switch"; justify-items: start; align-items: center; align-content: center; column-gap: var(--s-8); row-gap: 2px; align-self: center; max-height: calc(100% - var(--s-16)); overflow-y: auto; margin: var(--s-8) 0; margin-inline-end: var(--s-16); padding: 6px var(--s-8); }
+    .goal-strip > .chip { grid-area: chip; }
+    .goal-strip > .goal__text { grid-area: goal; }
+    .goal-strip > .goal__progress { grid-area: prog; }
+    .goal-strip > .goal__steps { grid-area: steps; }
+    .goal-strip > .switch { grid-area: switch; }
+    .goal-strip > .goal__text { white-space: normal; overflow: visible; line-height: 1.35; }
+  }
+  @media (orientation: landscape) and (min-height: 400px) and (max-height: 500px) and (max-width: 1023px) {
+    .tools__row { grid-template-columns: repeat(2, 44px); } /* 4 rows fit from 400px tall */
+  }
 
   /* ---- panel groups, swatches, controls ---- */
   .panel-group { display: flex; flex-direction: column; gap: var(--s-8); }
