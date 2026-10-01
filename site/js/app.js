@@ -19,6 +19,7 @@ import { toast } from "./ui/toast.js";
 import { closeAllSheets } from "./ui/dialog.js";
 import { emit } from "./lib/bus.js";
 import { registerServiceWorker, swVersion, takeResume } from "./pwa.js";
+import { applyRescues } from "./store/rescue.js";
 
 const SCREENS = {
   home: HomeScreen,
@@ -183,11 +184,15 @@ async function boot() {
   document.documentElement.classList.replace("no-js", "js");
   const main = document.getElementById("main");
   main.replaceChildren();
+  let storageUp = true;
   try {
     await openDb();
   } catch (err) {
+    storageUp = false;
     console.error("IndexedDB unavailable", err);
   }
+  // Work that an unload cut off (store/rescue.js) goes back into IndexedDB before any screen reads it.
+  if (storageUp) await applyRescues().catch((err) => console.warn("Rescue records were not applied", err));
   await loadSettings();
   refreshPersisted();
   checkNearlyFull({ force: true });
@@ -210,7 +215,7 @@ async function boot() {
     busy: () => router.busy || !!screen()?.isBusy?.(),
     view: () => screen()?.viewState?.() ?? null,
     flush: () => screen()?.flush?.() ?? true,
-  });
+  }).catch((err) => console.warn("Service worker setup failed", err));
 }
 
 boot();

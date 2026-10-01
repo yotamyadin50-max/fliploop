@@ -682,6 +682,8 @@
   .about__name { font: 700 var(--fs-h3)/1.2 var(--font-wordmark); }
 
   /* ---- fix round: WS1 additions ---- */
+  /* Save status is plain text; only the failed state holds a button (it leads to the W3 strip). */
+  .save-status__btn { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; border-radius: var(--r-control); }
 
   /* ---- fix round: WS2 additions ---- */
 

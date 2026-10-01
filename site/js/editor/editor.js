@@ -187,7 +187,9 @@ export class EditorScreen {
     title.addEventListener("keydown", (e) => { if (e.key === "Enter") title.blur(); });
     this.titleInput = title;
     this.h1 = h("h1", { class: "sr-only" }, doc.project.title);
-    this.status = h("button", { class: "save-status", type: "button", onclick: () => this.w3?.querySelector("button")?.focus() });
+    // Plain status text (a live region), not a control: only the failed state holds a button.
+    this.status = h("span", { class: "save-status", role: "status" });
+    this.statusState = null;
     this.setStatus("saved");
     const exportBtn = h("a", { class: "btn btn--compact btn--secondary topbar__export", href: `#/editor/${doc.project.id}/export`, "aria-label": t("editor.export.aria") }, iconEl("export", { size: 20 }), h("span", { class: "topbar__export-label" }, t("editor.export")));
     this.topbar = h("header", { class: "topbar" }, this.backLink(), this.h1, title,
@@ -278,7 +280,14 @@ export class EditorScreen {
     this.autosaver = new Autosaver(doc, {
       onStatus: (s, info) => this.onSaveStatus(s, info),
       onSaved: () => this.afterSave(),
+      activeStroke: () => this.input?.active || null,
     });
+    // "נשמר" means everything on the screen is stored (R1): the label follows a stroke from
+    // its first pixel, and goes back by itself when a stroke is cancelled. DrawingInput's own
+    // listeners were added first, so `input.active` is already up to date here.
+    for (const type of ["pointerdown", "pointerup", "pointercancel", "lostpointercapture"]) {
+      this.stage.display.addEventListener(type, () => this.autosaver.refresh());
+    }
 
     const ro = new ResizeObserver(() => this.fitStage());
     ro.observe(this.canvasRegion);
@@ -755,21 +764,21 @@ export class EditorScreen {
       saved: ["check", "editor.status.saved"],
       failed: ["warn", "editor.status.failed"],
     };
+    if (state === this.statusState) return; // same words: nothing for a screen reader to hear again
+    this.statusState = state;
     const [ic, key] = map[state];
     this.status.className = `save-status save-status--${state}`;
-    this.status.replaceChildren(iconEl(ic, { size: 18 }), h("span", {}, t(key)));
-    this.status.disabled = state !== "failed";
-    if (state === "failed") this.status.setAttribute("aria-label", t("editor.status.failed.aria"));
-    else this.status.removeAttribute("aria-label");
+    const content = [iconEl(ic, { size: 18 }), h("span", {}, t(key))];
+    // A control only when there is something to act on: the failed state leads to the W3 strip.
+    this.status.replaceChildren(...(state === "failed"
+      ? [h("button", { class: "save-status__btn", type: "button", "aria-label": t("editor.status.failed.aria"), onclick: () => this.w3?.querySelector("button")?.focus() }, ...content)]
+      : content));
   }
 
   onSaveStatus(state, info = {}) {
     this.setStatus(state);
-    if (state === "failed") this.w3.hidden = false;
-    if (state === "saved" && info.recovered) {
-      this.w3.hidden = true;
-      toast(t("w3.recovered"));
-    }
+    this.w3.hidden = state !== "failed";
+    if (state !== "failed" && info.recovered) toast(t("w3.recovered"));
   }
 
   afterSave() {
