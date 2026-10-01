@@ -39,7 +39,10 @@ export class PaletteBuilder {
   }
 
   build() {
-    if (!this.exactOverflow) return exactPalette([...this.exact.keys()]);
+    // White is always in the table (index 0, the background). 256 exact colours with no white
+    // among them would make 257 entries, one more than a GIF can hold: quantise instead.
+    const fits = !this.exactOverflow && (this.exact.size < 256 || this.exact.has(WHITE));
+    if (fits) return exactPalette([...this.exact.keys()]);
     return medianCutPalette(this.bins, 255, this.cand, this.vote);
   }
 }
@@ -244,6 +247,9 @@ export function lzwEncode(indices, minCodeSize) {
       prefix = k;
     }
     emit(prefix);
+    // A decoder adds one more table entry after this last code, and widens its codes if that
+    // entry fills the current width. The end code must be written at the width it will be read at.
+    if (nextCode < 4096 && ++nextCode > 1 << codeSize && codeSize < 12) codeSize++;
     emit(eoiCode);
   }
   if (curBits > 0) {
