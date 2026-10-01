@@ -32,13 +32,14 @@ export class ChallengeScreen {
     this.cta = h("button", { class: "btn btn--primary btn--block", type: "button", onclick: () => this.start(info, theme) }, iconEl("pencil"), t("challenge.cta.start"));
     this.stampRule = h("p", { class: "muted small", hidden: true }, t("challenge.stampRule"));
     const weeks = [...getProgress().challengeWeeks].sort((a, b) => b - a);
+    this.emptyLine = weeks.length ? null : h("p", { class: "muted" }, t("challenge.stamps.empty"));
     const stamps = weeks.length
       ? h("ul", { class: "stamps" }, weeks.map((w) => {
         const wt = THEMES[((w % 52) + 52) % 52];
         return h("li", { class: "stamp-circle", role: "img", "aria-label": t("challenge.stamp.aria", { week: w + 1, theme: wt }) },
           iconEl("stamp", { size: 26 }), h("span", { class: "num" }, String(w + 1)));
       }))
-      : h("div", { class: "stamps-empty" }, h("span", { class: "stamp-circle stamp-circle--empty", "aria-hidden": "true" }), h("p", { class: "muted" }, t("challenge.stamps.empty")));
+      : h("div", { class: "stamps-empty" }, h("span", { class: "stamp-circle stamp-circle--empty", "aria-hidden": "true" }), this.emptyLine);
     this.section.append(
       screenHeader("#/", "common.back.home", "common.back.home.aria"),
       h("div", { class: "page challenge" },
@@ -55,7 +56,11 @@ export class ChallengeScreen {
     const project = await findChallengeProject(info.weekIndex).catch(() => null);
     if (this.disposed || !project) return;
     this.cta.replaceChildren(iconEl("pencil"), t("challenge.cta.resume"));
-    this.stampRule.hidden = getProgress().challengeWeeks.includes(info.weekIndex);
+    if (getProgress().challengeWeeks.includes(info.weekIndex)) return;
+    // Joined, not stamped yet. With no stamps at all, the list's empty line stops inviting to
+    // join and says what is still missing; otherwise the rule sits under the button.
+    if (this.emptyLine) this.emptyLine.textContent = t("challenge.stampRule");
+    else this.stampRule.hidden = false;
   }
 
   async start(info, theme) {
@@ -65,6 +70,9 @@ export class ChallengeScreen {
       if (!existing && (await isFull())) { showW2b(); return; }
       const p = existing || (await openChallengeProject(info.weekIndex, theme));
       location.hash = `#/editor/${p.id}`;
+    } catch (err) {
+      // Storage failures are reported once, app-wide (contract K1); nothing more to do here.
+      console.error("Challenge could not be opened", err);
     } finally {
       this.cta.disabled = false;
     }
