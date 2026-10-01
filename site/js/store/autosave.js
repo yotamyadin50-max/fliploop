@@ -134,26 +134,32 @@ export class Autosaver {
     const doc = this.doc;
     const pendingSince = this.pendingSince;
     this.pendingSince = null;
+    // The dirty flags are cleared at the moment the values are read (CODE-C2). A change made
+    // while this write is running sets them again, so the follow-up write picks it up; they
+    // are put back if this write fails.
+    const projectWasDirty = doc.projectDirty;
+    doc.projectDirty = false;
+    const fields = { ...doc.project };
+    const frameOrder = doc.frames.map((f) => f.id);
+    const deleted = [...doc.deletedIds];
+    const frames = doc.frames.filter((f) => f.dirty);
+    const snapshot = [];
+    this.writing = new Set(frames);
     try {
-      const frames = doc.frames.filter((f) => f.dirty);
-      this.writing = new Set(frames);
-      const snapshot = [];
       const records = [];
       for (const f of frames) {
-        // The version is read at the moment the pixels are captured (toBlob copies the bitmap
-        // when it is called), so a stroke that ends later leaves the frame dirty.
-        const version = f.version;
-        const pending = canvasToBlob(this.source(f));
-        snapshot.push({ f, version });
-        records.push({
-          id: f.id, projectId: doc.project.id, imageBlob: await pending,
-          hold: f.hold, lessonRole: f.lessonRole, locked: f.locked,
-        });
+        // Version, hold and pixels are read in one go (toBlob copies the bitmap when it is
+        // called), so a stroke that ends later leaves the frame dirty.
+        const entry = { f, version: f.version, metaWasDirty: f.metaDirty };
+        f.metaDirty = false;
+        snapshot.push(entry);
+        const record = { id: f.id, projectId: fields.id, hold: f.hold, lessonRole: f.lessonRole, locked: f.locked };
+        record.imageBlob = await canvasToBlob(this.source(f));
+        records.push(record);
       }
-      const deleted = [...doc.deletedIds];
       const project = {
-        ...doc.project,
-        frameOrder: doc.frames.map((f) => f.id),
+        ...fields,
+        frameOrder,
         updatedAt: Math.max(Date.now(), (this.baseUpdatedAt || 0) + 1),
         thumbBlob: await thumbFromBlob(this.source(doc.frames[0]), doc.width, doc.height),
       };
@@ -162,13 +168,9 @@ export class Autosaver {
       this.inflightUpdatedAt = null;
       this.baseUpdatedAt = project.updatedAt;
       doc.project.updatedAt = project.updatedAt;
-      doc.project.frameOrder = project.frameOrder;
-      for (const { f, version } of snapshot) {
-        f.savedVersion = version;
-        f.metaDirty = false;
-      }
+      doc.project.frameOrder = frameOrder;
+      for (const { f, version } of snapshot) f.savedVersion = version;
       for (const id of deleted) doc.deletedIds.delete(id);
-      doc.projectDirty = false;
       this.writing = new Set();
       this.lastAttemptAt = Date.now();
       const wasFailed = this.failed;
@@ -181,6 +183,8 @@ export class Autosaver {
     } catch (err) {
       console.error("Autosave failed", err);
       if (err && typeof err === "object") err.handled = true; // W3 is this failure's message
+      if (projectWasDirty) doc.projectDirty = true;
+      for (const { f, metaWasDirty } of snapshot) if (metaWasDirty) f.metaDirty = true;
       this.inflightUpdatedAt = null;
       this.writing = new Set();
       this.pendingSince = pendingSince ?? Date.now();
