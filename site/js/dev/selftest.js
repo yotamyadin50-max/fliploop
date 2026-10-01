@@ -7,6 +7,7 @@ import { recordVideo, pickVideoType, canRecordVideo, planVideo } from "../export
 import { playSequence, gifDelaysCs } from "../core/timing.js";
 import { renderSheet, canvasRgb, deflate, hasCompressionStream } from "../print/render.js";
 import { cardList, sheetCount, PAPERS } from "../print/geometry.js";
+import { withPngDensity, pngChunkTypes } from "../print/png-density.js";
 import { buildPdf } from "../pdf/writer.js";
 import { makeCanvas, ctx2d, canvasToBlob, downloadBlob } from "../lib/util.js";
 
@@ -161,10 +162,14 @@ async function testVideo({ frames, fps, playMode, cancelAfterMs = 0 }) {
   try {
     const res = await recordVideo({ frames, fps, playMode, canvas, signal: ac.signal });
     const meta = await videoMeta(res.blob);
-    const ok = res.blob.size > 0 && meta.loaded && meta.videoWidth === frames[0].canvas.width && (meta.duration === null || meta.duration >= 2.9);
-    return { ok, supported: true, mime: res.type, blobType: res.blob.type, ext: res.ext, size: res.blob.size, plannedMs: plan.totalMs, cycles: plan.cycles, wallMs: Math.round(performance.now() - t0), ...meta, blob: res.blob };
+    // samples: one per animation tick plus the closing frame (MP4 only; null when it cannot be read).
+    const whole = res.samples === null || res.samples >= plan.samples;
+    const ok = res.blob.size > 0 && meta.loaded && meta.videoWidth === frames[0].canvas.width && whole
+      && (meta.duration === null || meta.duration >= plan.totalMs / 1000 - 0.3);
+    return { ok, supported: true, mime: res.type, blobType: res.blob.type, ext: res.ext, size: res.blob.size, plannedMs: plan.totalMs, cycles: plan.cycles,
+      plannedSamples: plan.samples, samples: res.samples, headerMs: res.durationMs === null ? null : Math.round(res.durationMs), wallMs: Math.round(performance.now() - t0), ...meta, blob: res.blob };
   } catch (err) {
-    return { ok: cancelAfterMs > 0 && err.name === "ExportCancelled", supported: true, mime: type, cancelled: err.name === "ExportCancelled", error: String(err.message || err), wallMs: Math.round(performance.now() - t0) };
+    return { ok: cancelAfterMs > 0 && err.name === "ExportCancelled", supported: true, mime: type, cancelled: err.name === "ExportCancelled", error: String(err.code || err.message || err), wallMs: Math.round(performance.now() - t0) };
   } finally {
     canvas.remove();
   }
@@ -232,8 +237,12 @@ async function testPdf({ frames, paperId = "A4", pingpong = false, forceJpeg = f
 async function testPng({ frames, paperId = "A4", sheet = 0, title = "FlipLoop self-test" }) {
   const { args } = sheetsFor(frames, paperId, false, title);
   const canvas = renderSheet(args(sheet, 300));
-  const blob = await canvasToBlob(canvas);
+  const raw = await canvasToBlob(canvas);
   canvas.width = 0;
+  // The same step the print screen takes: the 300 dpi resolution is written into the file.
+  const bytes = withPngDensity(new Uint8Array(await raw.arrayBuffer()));
+  const chunks = [...new Set(pngChunkTypes(bytes))].join(",");
+  const blob = new Blob([bytes], { type: "image/png" });
   const sig = [...new Uint8Array(await blob.slice(0, 8).arrayBuffer())].map((b) => b.toString(16).padStart(2, "0")).join("");
   const bmp = await createImageBitmap(blob);
   const res = { width: bmp.width, height: bmp.height };
@@ -264,8 +273,8 @@ async function testPng({ frames, paperId = "A4", sheet = 0, title = "FlipLoop se
   }
   const expectW = paperId === "A4" ? 2480 : 2550;
   const expectH = paperId === "A4" ? 3508 : 3300;
-  return { ok: sig === "89504e470d0a1a0a" && res.width === expectW && res.height === expectH && cardWidthMm !== null && Math.abs(cardWidthMm - 100) <= 0.5,
-    paperId, pngSignature: sig === "89504e470d0a1a0a", ...res, expected: `${expectW}x${expectH}`, cardWidthMm, size: blob.size, blob };
+  return { ok: sig === "89504e470d0a1a0a" && res.width === expectW && res.height === expectH && cardWidthMm !== null && Math.abs(cardWidthMm - 100) <= 0.5 && chunks === "IHDR,pHYs,IDAT,IEND",
+    paperId, pngSignature: sig === "89504e470d0a1a0a", ...res, expected: `${expectW}x${expectH}`, cardWidthMm, chunks, size: blob.size, blob };
 }
 
 // ---------- runner ----------

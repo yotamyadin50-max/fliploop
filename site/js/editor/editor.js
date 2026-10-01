@@ -817,18 +817,28 @@ export class EditorScreen {
 
   // ---------- export overlay ----------
   async openExport() {
-    if (this.player.playing) this.player.stop();
-    const { openExportOverlay } = await import("../export/overlay.js");
-    if (this.disposed || this.exportCtl) return;
-    await this.autosaver.saveNow();
-    this.exportCtl = openExportOverlay(this, {
-      onClose: (fromRoute) => {
-        this.exportCtl = null;
-        this.router.setTitle(this.doc.project.title);
-        if (!fromRoute) this.router.closeOverlay(`#/editor/${this.doc.project.id}`);
-      },
-    });
-    this.router.setTitle(t("meta.title.export"));
+    // One opening at a time: the two awaits below leave room for a second call (Export, Back,
+    // Export in quick succession), which would otherwise stack a second overlay.
+    if (this.exportCtl || this.exportOpening) return;
+    this.exportOpening = true;
+    try {
+      if (this.player.playing) this.player.stop();
+      const { openExportOverlay } = await import("../export/overlay.js");
+      if (this.disposed) return;
+      await this.autosaver.saveNow();
+      // The route may have moved on meanwhile: open only if it still asks for the overlay.
+      if (this.disposed || this.exportCtl || !/\/export$/.test(location.hash)) return;
+      this.exportCtl = openExportOverlay(this, {
+        onClose: (fromRoute) => {
+          this.exportCtl = null;
+          this.router.setTitle(this.doc.project.title);
+          if (!fromRoute) this.router.closeOverlay(`#/editor/${this.doc.project.id}`);
+        },
+      });
+      this.router.setTitle(t("meta.title.export"));
+    } finally {
+      this.exportOpening = false;
+    }
   }
 
   // ---------- keyboard ----------
