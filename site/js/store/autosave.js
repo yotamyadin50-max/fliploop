@@ -34,6 +34,11 @@ export class Autosaver {
     return this.doc.projectDirty || this.doc.deletedIds.size > 0 || this.doc.frames.some((f) => f.dirty);
   }
 
+  /** Nothing left to write: no pending change, no write in flight, and the last write succeeded. */
+  get isClean() {
+    return !this.isDirty && !this.saving && !this.failed;
+  }
+
   strokeEnded() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.saveNow(), STROKE_DELAY);

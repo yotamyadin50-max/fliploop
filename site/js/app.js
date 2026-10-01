@@ -17,7 +17,8 @@ import { EditorScreen } from "./editor/editor.js";
 import { showW2b } from "./ui/warnings.js";
 import { toast } from "./ui/toast.js";
 import { closeAllSheets } from "./ui/dialog.js";
-import { registerServiceWorker, swVersion } from "./pwa.js";
+import { emit } from "./lib/bus.js";
+import { registerServiceWorker, swVersion, takeResume } from "./pwa.js";
 
 const SCREENS = {
   home: HomeScreen,
@@ -54,7 +55,15 @@ class Router {
     this.current = null; // { name, params, screen, section }
     this.queue = Promise.resolve();
     this.previous = null;
+    this.pending = 0; // navigations queued or running
+    this.arrived = false; // a screen was mounted since the last "route" event
+    this.resume = null; // { y, view } from before an update reload, for the first screen only
     addEventListener("hashchange", () => this.go());
+  }
+
+  /** True while a route change is queued or running (a screen may be saving or loading). */
+  get busy() {
+    return this.pending > 0;
   }
 
   setTitle(screen) {
@@ -72,9 +81,16 @@ class Router {
   }
 
   go() {
+    this.pending++;
     this.queue = this.queue.then(() => this.navigate()).catch((err) => {
       console.error("Navigation failed", err);
       toast(t("common.error.generic"));
+    }).then(() => {
+      this.pending--;
+      if (this.pending || !this.arrived) return;
+      // Settled on a freshly mounted screen: a safe moment for a waiting update (js/pwa.js).
+      this.arrived = false;
+      emit("route", this.current?.name);
     });
     return this.queue;
   }
@@ -103,7 +119,11 @@ class Router {
       const screen = new SCREENS[route.name](section, this);
       this.current = { name: route.name, params: route.params, screen, section };
       scrollTo(0, 0);
-      await screen.mount(route.params);
+      const resume = this.resume;
+      this.resume = null;
+      await screen.mount(route.params, resume?.view ?? null);
+      if (resume?.y) restoreScroll(resume.y);
+      this.arrived = true;
       if (route.name !== "editor") section.querySelector("h1")?.focus({ preventScroll: true });
       const after = this.afterNavigate;
       this.afterNavigate = null;
@@ -128,6 +148,21 @@ class Router {
     const project = await createProject({});
     location.replace(`#/editor/${project.id}`);
   }
+}
+
+/** Back to where the user was before an update reload. A screen that fills in late (print
+ *  previews) gets a few seconds to grow tall enough; any input from the user ends it. */
+function restoreScroll(y) {
+  const until = Date.now() + 8000;
+  let done = false;
+  const stop = () => { done = true; };
+  for (const type of ["pointerdown", "wheel", "keydown", "touchstart"]) addEventListener(type, stop, { once: true, capture: true, passive: true });
+  const tick = () => {
+    if (done) return;
+    scrollTo(0, y);
+    if (Math.abs(scrollY - y) > 2 && Date.now() < until) setTimeout(tick, 150);
+  };
+  tick();
 }
 
 function captureErrors() {
@@ -157,6 +192,7 @@ async function boot() {
   refreshPersisted();
   checkNearlyFull({ force: true });
   const router = new Router(main);
+  router.resume = takeResume();
   window.__fliploop = {
     router,
     version: 1,
@@ -166,7 +202,15 @@ async function boot() {
   };
   await router.go();
   // After the first screen is up, so the worker's precache never competes with first paint.
-  registerServiceWorker();
+  // The updater applies a new version by itself, but only when the current screen says a
+  // reload costs nothing; it carries the screen's view state across that reload.
+  const screen = () => router.current?.screen;
+  registerServiceWorker({
+    screen: () => router.current?.name ?? null,
+    busy: () => router.busy || !!screen()?.isBusy?.(),
+    view: () => screen()?.viewState?.() ?? null,
+    flush: () => screen()?.flush?.() ?? true,
+  });
 }
 
 boot();

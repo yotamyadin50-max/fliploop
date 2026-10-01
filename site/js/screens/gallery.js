@@ -2,6 +2,7 @@
 import { h, clear } from "../lib/dom.js";
 import { t, tp } from "../lib/i18n.js";
 import { makeCanvas } from "../lib/util.js";
+import { busyWhile } from "../lib/busy.js";
 import { drawStrokes } from "../lib/raster.js";
 import { iconEl } from "../ui/icons.js";
 import { toast } from "../ui/toast.js";
@@ -22,7 +23,7 @@ export function importButton(label, onDone, cls = "btn btn--secondary") {
   input.addEventListener("change", async () => {
     const file = input.files?.[0];
     input.value = "";
-    if (file) await runImport(file, onDone);
+    if (file) await busyWhile(() => runImport(file, onDone)); // an update reload waits for it
   });
   return h("span", { class: "import-wrap" }, btn, input);
 }
@@ -45,7 +46,7 @@ export async function runImport(file, onDone) {
 }
 
 export async function runBackup() {
-  const name = await downloadBackup();
+  const name = await busyWhile(downloadBackup);
   toast(name ? t("backup.done", { filename: name }) : t("backup.empty"));
 }
 

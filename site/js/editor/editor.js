@@ -40,7 +40,7 @@ export class EditorScreen {
   }
 
   // ---------- lifecycle ----------
-  async mount({ id, overlay }) {
+  async mount({ id, overlay }, view = null) {
     this.projectId = id;
     this.renderLoading();
     let doc = null;
@@ -58,10 +58,42 @@ export class EditorScreen {
     this.doc = doc;
     this.fallbackTitle = await nextDefaultTitle(id);
     if (this.disposed) return;
+    this.restoreView(view);
     this.build();
+    if (view && Number.isInteger(view.cur) && view.cur > 0) this.select(view.cur, { instantScroll: true });
     this.router.setTitle(doc.project.title);
     if (overlay === "export") this.openExport();
     this.startCoach();
+  }
+
+  // ---------- automatic updates (js/pwa.js) ----------
+  /** True while a page reload would lose or cut something short. */
+  isBusy() {
+    if (!this.autosaver || this.disposed) return false;
+    return !!this.input.active || this.undo.busy || this.player.playing || !!this.strip.drag
+      || !!this.exportCtl || /\/export$/.test(location.hash) || !this.autosaver.isClean;
+  }
+
+  /** Saves everything now. Resolves false if it could not be saved. */
+  async flush() {
+    const saver = this.autosaver;
+    if (!saver) return true;
+    for (let i = 0; i < 3 && !saver.isClean; i++) await saver.saveNow();
+    return saver.isClean;
+  }
+
+  /** What a reload would otherwise reset: the frame on screen, the tool, the colour, the widths. */
+  viewState() {
+    if (!this.doc) return null;
+    return { cur: this.cur, tool: this.tool, color: this.color, pencilWidth: this.pencilWidth, eraserWidth: this.eraserWidth };
+  }
+
+  restoreView(view) {
+    if (!view) return;
+    if (["pencil", "eraser", "fill", "move"].includes(view.tool)) this.tool = view.tool;
+    if (/^#[0-9A-F]{6}$/i.test(view.color)) this.color = view.color.toUpperCase();
+    if (view.pencilWidth in WIDTHS) this.pencilWidth = view.pencilWidth;
+    if (view.eraserWidth in WIDTHS) this.eraserWidth = view.eraserWidth;
   }
 
   async update({ id, overlay }) {

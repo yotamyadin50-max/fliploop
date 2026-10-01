@@ -301,3 +301,56 @@ Upstream: `_process/03d-web-designer-palette.md` (spec), `_process/05d-copywrite
 **Regression:** `node tools/build-sw-manifest.mjs --check` up to date; `node tests/core.test.mjs` 17/17 (2 new: palette structure + neighbours > fill tolerance 32 + `colorName`; median cut keeps 70 shades exact); `selfTest({count:12})` gif, gifHalf, video, pdfA4, pdfLetter, pdfJpeg, pngA4 all ok; console 0 errors over the sweep (capture confirmed with a probe).
 
 **Seen, not changed:** the first-session coach toast ("הוסיפו פריים...") can sit over the lower edge of the desktop popover for its few seconds. The current color is not persisted across reloads (existing behaviour), so after a reload no tile is pressed until a pick.
+
+## Auto-update pass (2026-10-01): a new version applies by itself at a safe moment
+
+**Problem (real user report):** after a deploy the installed app kept showing the old version, and the "יש גרסה חדשה של FlipLoop / לרענן" toast went unnoticed. The waiting worker only activated on a toast tap or on the next cold launch, and an installed phone app is rarely cold-launched. The app also only asked the server for a new version every 30 minutes, and only on returning to the foreground.
+
+**What changed**
+
+| Area | Change |
+|---|---|
+| `js/pwa.js` (update flow rewritten) | A waiting version is now applied without any user action: `SKIP_WAITING`, one reload, same route. It happens only when ALL hold: page visible, no pointer down, no open `<dialog>` (sheets, confirms, the export overlay in any state), no file picker open, no import / backup / print render running, router idle, and the current screen reports not busy. **Triggers:** arriving on a freshly mounted screen and launching (applied at once, nothing has been started yet); returning to the foreground; a 2 s ticker while an update is pending, which needs a pause without input: 20 s in the Editor (or with a text field focused), 3 s elsewhere |
+| Editor safety (`editor.js`, `autosave.js`) | `EditorScreen.isBusy()`: stroke in progress, undo step being written, playback, strip drag, export overlay open or opening, or the autosaver not clean. New `Autosaver.isClean` = nothing dirty, no write in flight, last write succeeded. So a failed save (W3) blocks the automatic reload for as long as it lasts |
+| Nothing resets after the reload | Before reloading, the page stores `{hash, scrollY, view}` in sessionStorage (`fliploop-resume`); `app.js` hands `view` to the first screen's `mount()`. Editor restores current frame, tool, colour and both widths (the colour was never persisted, so a silent reload would otherwise have switched it to black and jumped to frame 1). Print restores its ping-pong option. Scroll position is restored, retrying for up to 8 s on a screen that fills in late (print previews) and stopping on any input |
+| Eager checks | `reg.update()` on launch, on every return to the foreground, on every screen arrival and from a 60 s timer, all throttled to at most once per 5 minutes and only while visible (was: 30 minutes, foreground only). An app left open on any screen gets a deploy within about 5 to 6 minutes |
+| Toast, the fallback | Same strings, no new copy. It now appears only when no safe moment came within 30 s (continuous drawing, a long export), or at once when the loop guard has already used its one automatic reload. It stays until tapped. "לרענן" now saves first (`flush()`), then reloads; if the save fails it does not reload and the toast comes back |
+| Loop guard | sessionStorage `fliploop-auto-update` holds the version this session already reloaded for automatically. The version is asked from the waiting worker itself (`GET_VERSION`). Same version still waiting after that reload: no second automatic reload, only the toast. No sessionStorage: no automatic reload at all |
+| Other tabs | A tab whose controller changed without asking (another tab applied the update) is treated the same way: it reloads itself at its own next safe moment, toast as fallback (was: toast only) |
+| Router (`app.js`) | `router.busy` (navigations queued or running) and a `route` bus event after a real screen mount (not on the export overlay opening or closing inside the Editor) |
+| New `js/lib/busy.js` | `busyWhile(fn)` / `isHeld()`. Wraps project import, backup download, and the Print screen's preview render, PDF, PNG and print jobs |
+| Cache | `?v=9`; `sw.js` regenerated: version `5eb0a919ffdf`, 65 files |
+
+`sw.js` logic is unchanged (still no `skipWaiting` at install). No Hebrew string added or changed; `final-ui-copy.md` untouched.
+
+**How verified** (real headless Chrome over CDP, `tools/run.mjs`, profile `C:/cdpfl4`, server 127.0.0.1:5178; 16 real version bumps, each a comment appended to `style.css` plus `node tools/build-sw-manifest.mjs`; `style.css` restored byte for byte at the end, `git status` clean for it). Page loads were counted with a script injected on every new document; drawing was done with real mouse events (`Input.dispatchMouseEvent`); "ink" = non-transparent pixels per frame.
+
+| Case | Result |
+|---|---|
+| (a) App left open on Home | Loaded 20:38:11, deploy at 20:38:24, no input. It reloaded itself at 20:43:16 (the 5 minute check window) onto the new version: exactly 1 reload, still 1 after 75 s more, old shell cache deleted, nothing waiting, no toast |
+| (b) Editor, stroke in progress | Update found with the mouse button held mid-stroke: 26 s later still no reload. Released: saved, clean, but at +12 s still no reload (not idle long enough). Reloaded at +22 s. Same route `#/editor/<id>`, ink `[732, 2722]` before and after, still on frame 2 of 2, blue, width L |
+| (c) During an export | Update arrived 1 s into a 24 s video recording: at second 23 still recording, no reload. Export finished (MP4, 25,798 B); 25 s later with the result still on screen, no reload. Overlay closed by a real click: reloaded 22 s later on the Editor route, 12 frames intact |
+| (d) Toast fallback | 11 strokes over 65 s: no reload, toast appeared at 30 s and was still there 33 s later. Tapped "לרענן": reloaded 95 ms later, new version, ink identical, same frame |
+| Save failing (injected IndexedDB error) | 36 s idle with an unsaved stroke: no reload. Toast tapped: no reload, toast back, W3 showing. Storage restored: retry saved, then it reloaded by itself; the stroke was there after the reload |
+| Leaving the Editor while dirty | Back to Gallery: saved on unmount, reloaded on arrival, 1 reload, drawing intact when reopened |
+| Loop guard | Version pre-marked as already used: 14 s idle on Home, no reload, toast shown within 3 s. New session with the version still waiting: exactly one reload at launch, then stable |
+| Background and foreground (window really minimised, `visibilityState` hidden) | Hidden 12 s with a version waiting: no reload; shown again: reloaded at once. Full flow: hidden 5.5 minutes, deploy in the meantime, no check while hidden; on return it checked, installed and reloaded within 2.2 s, no manual step |
+| Two tabs | The visible tab applied the update; the hidden tab went stale, showed the toast, and reloaded itself once when brought to the front |
+| File picker | Chooser open 10 to 14 s on Gallery: no reload. Cancelled: applied. File chosen: the import finished first (2 projects), then the reload, both projects still there |
+| Print | Ping-pong option kept; scroll 3000 came back as 2956 while previews were still filling in |
+| Upgrade from the committed build (`193c89fdf674`, old `pwa.js`), on a scratch copy served at :5179 | Old client: toast at the next launch, new code on the launch after that. From then on a bump applied by itself |
+| First visit, fresh origin | Worker installs and takes control with no reload, no toast |
+
+**Regression:** `node tools/build-sw-manifest.mjs --check` up to date (`5eb0a919ffdf`, 65 files); `node tests/core.test.mjs` 17/17; `selfTest({count:12})` gif, gifHalf, video, pdfA4, pdfLetter, pdfJpeg, pngA4 all ok; console 0 messages over 22 fresh loads (11 routes including the export overlay, not-found Editor and a bogus route, at 1280 and 375) and over every case above except the deliberately injected save failure; capture confirmed with a `console.error` probe; `fliploop-errors` empty; no horizontal overflow on any route.
+
+**Found while testing, fixed:** the first version refused to update while any text field had focus. Drawing leaves the Editor title field focused (the canvas calls `preventDefault` on pointerdown), so one title edit would have blocked the update for the whole session. A focused field now only asks for the longer 20 s pause; re-tested.
+
+**Known limits, stated plainly**
+- **Devices already on the old build need one last old-style update.** Their `pwa.js` is the old one. They get this fix by tapping "לרענן" once, or by fully closing and reopening the app (twice at most: once to fetch, once to switch). Everything after that is automatic. Nothing on the server side can safely force it without risking unsaved work on those devices.
+- **Undo history does not survive the reload** (it lives in memory). The drawing, frame, tool, colour and widths do. This is why the Editor waits for 20 s without input.
+- **Not tested on a real phone.** All of the above is desktop headless Chrome. The Android installed app and iOS Safari (home screen app) should behave the same, since only standard APIs are used (`visibilitychange`, `sessionStorage`, `registration.update()`), but that is an expectation, not a measurement.
+- The scroll position on a long Print page comes back approximately, not to the pixel.
+- The context line for `update.ready` in `final-ui-copy.md` §21b still reads as if the toast always shows; the string itself is unchanged, so I left the file alone.
+- Seen, not changed: on one first visit the worker was still "installing" after 6 s (a second try took 0.8 s). Probably the Google Fonts warm-up, which the install waits for; cause not confirmed. No effect on updates.
+
+**Revision discipline:** `registerServiceWorker()` has one caller (`app.js`), now passing four callbacks. `screen.mount(params, view)` gained a second argument used by Editor and Print only; other screens ignore it. `toast()`, `dialog.js` and `sw.js` logic are unchanged. `swVersion()` keeps its signature. Nothing was committed, pushed or deployed.

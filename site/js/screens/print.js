@@ -5,6 +5,7 @@ import { t, tp } from "../lib/i18n.js";
 import { downloadBlob, safeFileName, canvasToBlob, sleep, yieldToMain } from "../lib/util.js";
 import { iconEl } from "../ui/icons.js";
 import { toast } from "../ui/toast.js";
+import { busyWhile } from "../lib/busy.js";
 import { Doc } from "../editor/doc.js";
 import { cardList, sheetCount, PAPERS } from "../print/geometry.js";
 import { renderSheet, canvasRgb, deflate, hasCompressionStream } from "../print/render.js";
@@ -21,7 +22,7 @@ export class PrintScreen {
     this.urls = [];
   }
 
-  async mount({ id }) {
+  async mount({ id }, view = null) {
     this.id = id;
     this.router.setTitle(t("meta.title.print"));
     clear(this.section);
@@ -31,9 +32,14 @@ export class PrintScreen {
     if (!doc) return this.renderNotFound();
     this.doc = doc;
     this.paper = getSettings().printPaper === "Letter" ? "Letter" : "A4";
-    this.pingpong = false;
+    this.pingpong = !!view?.pingpong && doc.project.playMode === "pingpong";
     await document.fonts?.ready;
     this.render();
+  }
+
+  /** Carried across an update reload (js/pwa.js): the one option that is not a saved setting. */
+  viewState() {
+    return { pingpong: !!this.pingpong };
   }
 
   unmount() {
@@ -85,14 +91,14 @@ export class PrintScreen {
       h("p", { class: "print-summary num-mix" }, this.summaryText()),
       doc.frames.some((f) => f.hold > 1) ? h("p", { class: "muted small" }, t("print.holdNote")) : null);
 
-    this.pdfBtn = h("button", { class: "btn btn--primary", type: "button", onclick: () => this.downloadPdf() }, iconEl("download"), t("print.action.pdf"));
+    this.pdfBtn = h("button", { class: "btn btn--primary", type: "button", onclick: () => busyWhile(() => this.downloadPdf()) }, iconEl("download"), t("print.action.pdf"));
     const actions = h("div", { class: "print-actions" },
       this.pdfBtn,
       h("div", { class: "print-actions__item" },
-        h("button", { class: "btn btn--secondary", type: "button", onclick: () => this.print() }, iconEl("print"), t("print.action.print")),
+        h("button", { class: "btn btn--secondary", type: "button", onclick: () => busyWhile(() => this.print()) }, iconEl("print"), t("print.action.print")),
         h("p", { class: "muted small" }, t("print.dialogTip"))),
       h("div", { class: "print-actions__item" },
-        h("button", { class: "btn btn--secondary", type: "button", onclick: () => this.downloadAllPng() }, iconEl("download"), t("print.action.png")),
+        h("button", { class: "btn btn--secondary", type: "button", onclick: () => busyWhile(() => this.downloadAllPng()) }, iconEl("download"), t("print.action.png")),
         h("p", { class: "muted small" }, t("print.multiDownloadTip"))));
     this.status = h("p", { class: "muted print-status", role: "status" });
     this.previews = h("div", { class: "sheets" });
@@ -107,7 +113,7 @@ export class PrintScreen {
             h("span", { class: "legend__staple" }, t("print.legend.staple")),
             h("span", { class: "legend__cut" }, t("print.legend.cut"))),
           this.previews)));
-    this.renderPreviews();
+    busyWhile(() => this.renderPreviews());
   }
 
   summaryText() {
@@ -132,7 +138,7 @@ export class PrintScreen {
       const alt = t("print.preview.sheet.aria", { n: s + 1, total, cardsText: tp("print.summary.cards", onSheet, { cards: onSheet }) });
       this.previews.append(h("figure", { class: "sheet-preview" },
         h("img", { src: url, alt, class: `sheet-preview__img sheet-preview__img--${this.paper}` }),
-        h("button", { class: "btn btn--secondary btn--compact", type: "button", "aria-label": t("print.action.pngSheet.aria", { n: s + 1 }), onclick: () => this.downloadPng(s) },
+        h("button", { class: "btn btn--secondary btn--compact", type: "button", "aria-label": t("print.action.pngSheet.aria", { n: s + 1 }), onclick: () => busyWhile(() => this.downloadPng(s)) },
           iconEl("download", { size: 20 }), t("print.action.pngSheet", { n: s + 1 }))));
       await yieldToMain();
     }
