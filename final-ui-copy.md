@@ -780,6 +780,11 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
+| `lessonMode.nudgeHold` | כל הפריימים צוירו. עכשיו שנו החזקה באחד הפריימים ולחצו על ▶︎ (הפעלה) כדי לסיים. | Lesson 9 only (R15, audit COPY-C-02): the toast when both blanks are drawn and no hold was changed yet, and again when Play is pressed in that state. Copywriter's text, with the Play word per R41 (U+25B6 + U+FE0E, then the word) |
+| `lessonDone.toast` | קיבלתם חותמת על שיעור {n} | Plain toast on the next screen when the child left the Editor while the finished lesson was still playing (R14, J2): the stamp is recorded, no sheet opens. Developer's working draft |
+| `challenge.stamp.toast` | קיבלתם חותמת על האתגר של השבוע | One toast in the Editor at the moment the challenge stamp is first recorded (R20, CH-C-01). Developer's working draft |
+| `lessonMode.progress.aria.one` | פריים ריק אחד מתוך {total} צויר | K11: replaces `lessonMode.progress.aria` at 1 (audit COPY-C-12) |
+| `lessonMode.progress.aria.other` | {done} מתוך {total} פריימים ריקים צוירו | K11: same text as the old unsuffixed key; the old row stays until the integrator removes unused keys |
 
 ### 24.4 WS4
 

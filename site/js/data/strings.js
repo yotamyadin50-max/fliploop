@@ -476,6 +476,11 @@ export const STRINGS = {
   "confirm.resize.body": "הציורים יישארו במרכז. מה שיוצא מהשוליים ייחתך, ובצד השני יתווסף שטח ריק.",
   "confirm.resize.ok": "לשנות",
   "confirm.resize.cancel": "ביטול",
+  "lessonMode.nudgeHold": "כל הפריימים צוירו. עכשיו שנו החזקה באחד הפריימים ולחצו על ▶︎ (הפעלה) כדי לסיים.",
+  "lessonDone.toast": "קיבלתם חותמת על שיעור {n}",
+  "challenge.stamp.toast": "קיבלתם חותמת על האתגר של השבוע",
+  "lessonMode.progress.aria.one": "פריים ריק אחד מתוך {total} צויר",
+  "lessonMode.progress.aria.other": "{done} מתוך {total} פריימים ריקים צוירו",
   "tool.width.s": "דק",
   "tool.width.m": "בינוני",
   "tool.width.l": "עבה"
