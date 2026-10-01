@@ -100,6 +100,19 @@ test("flood fill is contiguous, respects tolerance, and tucks under edges", () =
   assert.equal(data[(0 * w + 9) * 4 + 3], 0); // right side untouched
   assert.equal(data[(3 * w + 5) * 4], 0); // wall pixel is opaque black: stays black on top
   assert.equal(floodFill(data, w, h, 1, 1, [255, 0, 0]), null); // same colour: no-op
+  // On paint the tolerance is 4, not 32 (fix round R8): a refill stops at a wall that is only
+  // 22 away (ink #1F1E1B against gray 7 #35322D, the pair that used to eat the outline).
+  const ink = [0x1f, 0x1e, 0x1b], gray7 = [0x35, 0x32, 0x2d];
+  const paint = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    const c = x === 5 ? ink : gray7;
+    paint[i] = c[0]; paint[i + 1] = c[1]; paint[i + 2] = c[2]; paint[i + 3] = 255;
+  }
+  assert.ok(floodFill(paint, w, h, 1, 1, [245, 197, 24]));
+  assert.deepEqual([...paint.subarray((3 * w + 5) * 4, (3 * w + 5) * 4 + 3)], ink); // the ink wall is still ink
+  assert.deepEqual([...paint.subarray((3 * w + 9) * 4, (3 * w + 9) * 4 + 3)], gray7); // nothing crossed it
+  assert.deepEqual([...paint.subarray((3 * w + 0) * 4, (3 * w + 0) * 4 + 3)], [245, 197, 24]);
 });
 
 test("changed pixel count ignores identical frames", () => {
@@ -262,10 +275,24 @@ test("lessons match the plan table and the copy's derived counts", () => {
 
 // ---- shade palette (_process/03d) ----
 import { SHADE_ROWS, SWATCHES, colorName } from "../site/js/editor/panels.js";
-import { FILL_TOLERANCE } from "../site/js/core/fill.js";
+import { FILL_TOLERANCE, FILL_TOLERANCE_PAINT } from "../site/js/core/fill.js";
 const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
 test("shade palette: 10 x 7, base colour in its own row, neighbours beyond fill tolerance", () => {
+  // All 2,556 pairs of the 72 distinct colours (12 swatches + 70 shades, 10 shared) are further
+  // apart than the tolerance the fill uses on paint, so no pair can leak into the other (R8).
+  const all = [...new Set([...SWATCHES, ...SHADE_ROWS.flatMap((r) => r.cells)])];
+  assert.equal(all.length, 72);
+  let pairs = 0, closest = 255;
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    pairs++;
+    const a = rgbOf(all[i]), b = rgbOf(all[j]);
+    const d = Math.max(...a.map((v, k) => Math.abs(v - b[k])));
+    if (d < closest) closest = d;
+    assert.ok(d > FILL_TOLERANCE_PAINT, `${all[i]} vs ${all[j]}`);
+  }
+  assert.equal(pairs, 2556);
+  assert.equal(closest, 9); // white against gray 1: more than twice the paint tolerance
   assert.equal(SHADE_ROWS.length, 10);
   for (const r of SHADE_ROWS) {
     assert.equal(r.cells.length, 7);
