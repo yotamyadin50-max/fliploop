@@ -18,8 +18,12 @@
 | Action buttons and menu actions | infinitive (no person, no gender) | "להתחיל לצייר", "להוריד PNG", "למחוק" |
 | Tool names, screen names, section headings | noun | "עיפרון", "ייצוא", "שכבת בצל" |
 | The user's own things | first person "שלי" (matches the plan's "העבודות שלי") | "האתגרים שלי", "להפוך לפרויקט שלי" |
-| Back controls | "ל" + destination, max 7 chars | "לגלריה" |
-| Fixed exceptions | "ביטול" (Cancel / Undo tool), "הבנתי" (first person, gender neutral) | |
+| Back controls | "ל" + destination (Home is "הביתה"), max 8 chars | "לגלריה", "לשיעורים" |
+| Fixed exceptions | "ביטול" (Cancel only), "הבנתי" (first person, gender neutral) | |
+
+**One word, one action (fix round 2026-10, R38):** "ביטול" means Cancel and nothing else. The Undo and Redo tools are "אחורה" and "קדימה" ("צעד אחורה", "צעד קדימה" in full), and the action inside an undo toast is "להחזיר".
+
+**One name per thing (fix round 2026-10, R40):** the Gallery screen is "הגלריה שלי" and its list heading is "האנימציות שלי"; the Lessons screen is "שיעורים" and its Back label "לשיעורים"; Home's Back label is "הביתה"; the film strip is "רצועה"; a tap is "לחצו" / "לחיצה" (never "הקישו" / "הקשה"); the backup action is "לגבות הכל" and the import action "לייבא קובץ" on every screen; the dashed guide is "הקו המקווקו". An accessible name always starts with the words the control shows (WCAG 2.5.3).
 
 **Placeholders:** `{like_this}`. Numbers, fps, percentages, sizes and counters go inside a `dir="ltr"` isolate (`.num`), per Part B. `{lessonName}` and `{goal}` come from `lessons.js` (the lessons deliverable).
 
@@ -29,7 +33,7 @@
 
 **Punctuation:** no em or en dashes anywhere. "·" (middle dot) separates fields. A plain hyphen appears only after a one-letter prefix before Latin text or digits ("ב-FlipLoop", "כ-PDF", "ל-4:3").
 
-**Limits** (from `04b-build-manager-kickoff.md`): Back 7 chars; status 1 word; coach mark 1 line (about 24 chars in the 240px bubble); W2 1 line incl. %; W3 2 lines beside its button; W5 2 lines; export card 1 Muted line; themes 16 chars; lesson goal 28 chars and lesson name 24 chars (lessons deliverable).
+**Limits** (from `04b-build-manager-kickoff.md`, amended in the fix round 2026-10): Back 8 chars (R40, checked at 320px); status 1 or 2 short words, icon only under 360px (R39); coach mark 1 line (about 24 chars in the 240px bubble); W2 1 line incl. %; W3 2 lines beside its button; W5 2 lines; export card 1 Muted line; themes 16 chars; lesson goal 28 chars and lesson name 24 chars (lessons deliverable).
 
 ---
 
@@ -37,27 +41,27 @@
 
 | Key | Hebrew / text | Where / notes |
 |---|---|---|
-| `meta.title.home` | FlipLoop | `<title>` on Home |
-| `meta.title.pattern` | FlipLoop · {screen} | `<title>` on every other screen |
+| `meta.title.home` | FlipLoop · אנימציה בציור, דף אחרי דף | `<title>` on Home. Says what the app is in a shared link or a search result (fix round R43) |
+| `meta.title.pattern` | {screen} · FlipLoop | `<title>` on every other screen. Screen first, so a narrow tab shows it (R43); same order as `print.pdf.metaTitle` |
 | `meta.title.editor` | {title} | `{screen}` in the Editor (project title) |
 | `meta.title.export` | ייצוא | |
 | `meta.title.print` | גיליון הדפסה | |
 | `meta.title.lessons` | שיעורים | |
 | `meta.title.lesson` | {lessonName} | |
 | `meta.title.challenge` | האתגר של השבוע | |
-| `meta.title.gallery` | העבודות שלי | |
+| `meta.title.gallery` | הגלריה שלי | Same name as `gallery.h1` and `home.nav.gallery` (R40) |
 | `meta.title.settings` | שמירה והגדרות | |
 | `meta.title.notFound` | לא נמצא | |
-| `meta.description` | ציירו כמה פריימים ותראו אותם זזים. 12 שיעורי אנימציה, אתגר שבועי, ייצוא ל-GIF, לווידאו ולגיליון הדפסה. בלי הרשמה, והציורים נשמרים רק במכשיר שלכם. | `<meta name="description">`, about 150 chars |
+| `meta.description` | ציירו כמה דפים ותראו אותם זזים. 12 שיעורי אנימציה, אתגר שבועי, ייצוא ל-GIF, לווידאו ולגיליון הדפסה. בלי הרשמה, והציורים נשמרים רק במכשיר שלכם. | `<meta name="description">`, about 150 chars |
 | `meta.og.title` | FlipLoop | `og:title` |
-| `meta.og.description` | ציירו כמה פריימים ותראו אותם זזים. בלי הרשמה. | `og:description` |
+| `meta.og.description` | ציירו כמה דפים ותראו אותם זזים. בלי הרשמה. | `og:description`. "דפים", like the Home subtitle: "פריים" is only taught at coach mark 2 (R43) |
 | `meta.og.imageAlt` | שולחן אור ועליו ספרון דפדוף עם דמות קטנה שמנופפת | `og:image:alt` |
 | `manifest.name` | FlipLoop | |
 | `manifest.shortName` | FlipLoop | |
-| `manifest.description` | ציירו פריים אחרי פריים ותראו את הציור זז. | |
+| `manifest.description` | ציירו דף אחרי דף ותראו את הציור זז. | |
 | `manifest.shortcut.new` | אנימציה חדשה | → `#/new` |
 | `manifest.shortcut.challenge` | האתגר של השבוע | → `#/challenge` (the plan wrote "האתגר השבועי"; aligned with the Home button so the same thing has one name) |
-| `manifest.screenshot.narrowHome` | ציירו כמה פריימים ותראו אותם זזים | Install-dialog screenshot label, phone, Home (PWA pass) |
+| `manifest.screenshot.narrowHome` | ציירו כמה דפים ותראו אותם זזים | Install-dialog screenshot label, phone, Home (PWA pass) |
 | `manifest.screenshot.narrowEditor` | עורך האנימציה עם רצועת הפריימים | Phone, Editor |
 | `manifest.screenshot.wideEditor` | עורך האנימציה במחשב | Wide, Editor |
 | `manifest.screenshot.wideHome` | שולחן האור של FlipLoop | Wide, Home |
@@ -68,24 +72,24 @@
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
-| `common.back.home` | לבית | Back on Lessons, Challenge, Gallery, Settings (4 chars) |
-| `common.back.home.aria` | חזרה לדף הבית | |
+| `common.back.home` | הביתה | Back on Lessons, Challenge, Gallery, Settings (5 chars). What a child says; "לבית" was stiff (fix round R40) |
+| `common.back.home.aria` | הביתה, חזרה לדף הבית | Every Back name starts with the visible label (WCAG 2.5.3) |
 | `common.back.gallery` | לגלריה | Back in Editor (free) (6) |
-| `common.back.gallery.aria` | חזרה לעבודות שלי | |
+| `common.back.gallery.aria` | לגלריה, חזרה לגלריה שלי | |
 | `common.back.challenge` | לאתגר | Back in Editor (challenge), goes to `#/challenge` (5). Added Critic round (F7) |
-| `common.back.challenge.aria` | חזרה לאתגר של השבוע | |
+| `common.back.challenge.aria` | לאתגר, חזרה לאתגר של השבוע | |
 | `common.back.lesson` | לשיעור | Back in Editor (lesson mode) (6) |
-| `common.back.lesson.aria` | חזרה לדף השיעור | |
-| `common.back.lessons` | למסלול | Back on Lesson detail (6). Replaces "לשיעורים" (8 chars, over the limit) |
-| `common.back.lessons.aria` | חזרה לכל השיעורים | |
+| `common.back.lesson.aria` | לשיעור, חזרה לדף השיעור | |
+| `common.back.lessons` | לשיעורים | Back on Lesson detail (8). The screen it returns to is titled "שיעורים" (fix round R40; was "למסלול") |
+| `common.back.lessons.aria` | לשיעורים, חזרה לכל השיעורים | |
 | `common.back.editor` | לציור | Back on Print (5) |
-| `common.back.editor.aria` | חזרה לעריכת {title} | |
-| `common.cancel` | ביטול | |
+| `common.back.editor.aria` | לציור, חזרה לעריכת {title} | |
+| `common.cancel` | ביטול | The only meaning of "ביטול" in the app (R38) |
 | `common.close` | לסגור | aria-label of every X / dismiss |
 | `common.gotIt` | הבנתי | |
-| `common.undo` | ביטול | Action text inside 5 s undo toasts |
+| `common.undo` | להחזיר | Action text inside 5 s undo toasts (brings back a deleted frame or project, a cleared frame). Was "ביטול" (R38) |
 | `common.save` | לשמור | |
-| `common.loading` | טוען… | Generic loading text |
+| `common.loading` | טוענים… | Generic loading text. Plural, like the rest of the app |
 | `common.error.generic` | משהו השתבש. נסו שוב. | Fallback for any unexpected error |
 | `common.kind.lesson` | שיעור | Kind chip on Gallery cards |
 | `common.kind.challenge` | אתגר | Kind chip on Gallery cards |
@@ -101,7 +105,7 @@
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
-| `home.nav.gallery` | העבודות שלי | Header link, left |
+| `home.nav.gallery` | הגלריה שלי | Header link, left (R40) |
 | `home.nav.settings` | שמירה והגדרות | Header link, left |
 | `home.nav.install` | להתקין | Header link at the start, shown only while the browser offers install (PWA pass) |
 | `home.nav.install.aria` | להתקין את FlipLoop | |
@@ -111,12 +115,16 @@
 | `home.cta.new.aria` | אנימציה חדשה: פותח דף ציור ריק | |
 | `home.cta.lessons` | שיעורים | Secondary card, line 1 |
 | `home.cta.lessons.progress` | {done}/12 | Secondary card, line 2, beside the stamp glyph |
-| `home.cta.lessons.aria` | שיעורים, {done} מתוך 12 הושלמו | |
+| `home.cta.lessons.aria` | שיעורים, {done} מתוך 12 הושלמו | Replaced by the two plural keys below (fix round, K11); kept until the integrator removes unused keys |
+| `home.cta.lessons.aria.one` | שיעורים, שיעור אחד מתוך 12 הושלם | Exactly 1 lesson done |
+| `home.cta.lessons.aria.other` | שיעורים, {done} מתוך 12 הושלמו | 0, and 2 to 12 |
 | `home.cta.challenge` | האתגר של השבוע | Secondary card, line 1 |
 | `home.cta.challenge.theme` | {theme} | Secondary card, line 2 (Muted) |
 | `home.cta.challenge.aria` | האתגר של השבוע: {theme} | |
 | `home.continue` | המשך: {title} | Tertiary link, only if a project exists |
-| `home.continue.aria` | להמשיך לעבוד על {title} | |
+| `home.continue.aria` | המשך: {title} | Same as the visible text (WCAG 2.5.3) |
+| `home.art.pause.aria` | לעצור את האנימציה | The Home flipbook is a toggle button (fix round R37, WCAG 2.2.2): name while it flips |
+| `home.art.play.aria` | להפעיל את האנימציה | Name while it is paused |
 
 ---
 
@@ -126,7 +134,7 @@
 |---|---|---|
 | `coach.1` | ציירו משהו | At the canvas, frame 1 empty (10 chars) |
 | `coach.2` | הוסיפו פריים וציירו הלאה | At "+", after the first stroke. Teaches the word "פריים" (24 chars) |
-| `coach.3` | עכשיו לחצו על הפעלה | At Play, after frame 2 has a stroke (19 chars) |
+| `coach.3` | עכשיו לחצו על ▶︎ | At Play, after frame 2 has a stroke. The glyph the child sees on the button: on phones Play has no word (fix round R41). The glyph is U+25B6 followed by U+FE0E (text presentation, so it is never drawn as a colour emoji) |
 | `coach.close.aria` | לסגור את הטיפ | 44px close |
 | `firstPlay.line` | הציור שלכם הפך לסרט. | **New line, requested in the spawn prompt; the plan has no text for first Play.** Shown once (`firstPlaySeen`), in the coach-mark bubble style above the gate at t = 360ms, fades out after 2.5 s, never blocks, also sent to the polite live region. Reduced motion: appears and fades by opacity only |
 
@@ -145,12 +153,12 @@
 | `editor.title.hint` | עד 40 תווים | aria-describedby |
 | `editor.export` | ייצוא | Top bar button |
 | `editor.export.aria` | ייצוא: GIF, וידאו, הדפסה או קובץ פרויקט | |
-| `editor.status.saving` | שומר… | One word |
+| `editor.status.saving` | שומרים… | One word, plural like the rest of the app (fix round R39) |
 | `editor.status.saved` | נשמר | One word |
-| `editor.status.failed` | נכשל | One word. Replaces the plan's two-word "לא נשמר"; opens W3 |
-| `editor.status.failed.aria` | השמירה נכשלה. פרטים בפס האדום | |
+| `editor.status.failed` | לא נשמר | Two short words (R39): "נכשל" was masculine and vague. Under 360px the status shows its icon only; opens W3 |
+| `editor.status.failed.aria` | השמירה נכשלה. פרטים בפס האדום. | |
 | `editor.canvas.aria` | דף ציור, פריים {n} מתוך {total} | |
-| `editor.canvas.playing.aria` | מתנגן. הקשה על הדף עוצרת | While Playing |
+| `editor.canvas.playing.aria` | מתנגן. לחיצה על הדף עוצרת. | While Playing |
 
 ---
 
@@ -160,19 +168,19 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 
 | Key | Label | aria-label | Tooltip |
 |---|---|---|---|
-| `tool.pencil` | עיפרון | עיפרון, {width} | עיפרון (B). הקשה נוספת: עובי |
+| `tool.pencil` | עיפרון | עיפרון, {width} | עיפרון (B). לחיצה נוספת: עובי. |
 | `tool.pencil.s` | דק | עיפרון דק, 2 פיקסלים | דק (1) |
 | `tool.pencil.m` | בינוני | עיפרון בינוני, 5 פיקסלים | בינוני (2) |
 | `tool.pencil.l` | עבה | עיפרון עבה, 10 פיקסלים | עבה (3) |
 | `tool.pencil.sheet` | עובי העיפרון | (sheet title) | |
-| `tool.eraser` | מחק | מחק, {width} | מחק (E). הקשה נוספת: עובי |
+| `tool.eraser` | מחק | מחק, {width} | מחק (E). לחיצה נוספת: עובי. |
 | `tool.eraser.sheet` | עובי המחק | (sheet title) | |
-| `tool.fill` | מילוי | מילוי בצבע | מילוי (G). ממלא שטח סגור בפריים הזה |
+| `tool.fill` | מילוי | מילוי בצבע | מילוי (G). ממלא שטח סגור בפריים הזה. |
 | `tool.color` | צבע | הצבע הנוכחי: {colorName} | צבע: {colorName} |
-| `tool.undo` | ביטול | ביטול הצעד האחרון | ביטול (Ctrl+Z) |
-| `tool.undo.disabled` | | אין מה לבטל | אין מה לבטל |
-| `tool.redo` | שחזור | שחזור הצעד שבוטל | שחזור (Ctrl+Shift+Z) |
-| `tool.redo.disabled` | | אין מה לשחזר | אין מה לשחזר |
+| `tool.undo` | אחורה | צעד אחורה: לבטל את הצעד האחרון | צעד אחורה (Ctrl+Z) |
+| `tool.undo.disabled` | | אחורה, אין צעד לחזור אליו | אין צעד לחזור אליו |
+| `tool.redo` | קדימה | צעד קדימה: להחזיר את הצעד שבוטל | צעד קדימה (Ctrl+Shift+Z) |
+| `tool.redo.disabled` | | קדימה, אין צעד להחזיר | אין צעד להחזיר |
 | `tool.more` | עוד | עוד כלים | הזזה, שכבת בצל, גודל הדף, ניקוי |
 
 **Width names for `{width}`:** `tool.width.s` דק · `tool.width.m` בינוני · `tool.width.l` עבה.
@@ -185,25 +193,25 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 |---|---|---|
 | `more.title` | עוד כלים | Sheet title |
 | `more.move` | הזזה | Move tool |
-| `more.move.tooltip` | הזזה (V). גוררים את כל הציור בפריים | |
-| `more.move.hint` | מה שיוצא מהדף נחתך. ביטול מחזיר אותו | Helper under Move, 1 line |
+| `more.move.tooltip` | הזזה (V). גוררים את כל הציור בפריים. מה שיוצא מהדף נחתך. | The desktop Move key has no helper line, so the warning is in its tooltip (fix round, T-09) |
+| `more.move.hint` | מה שיוצא מהדף נחתך. צעד אחורה מחזיר אותו. | Helper under Move, 1 line |
 | `onion.title` | שכבת בצל | Section title (sheet and desktop panel) |
 | `onion.hint` | הפריים הקודם באדום, הבא בכחול, מתחת לציור | Helper, 1 line |
-| `onion.toggle` | שכבת בצל | Switch label |
+| `onion.toggle` | להציג | Switch label. The section title right above it already says "שכבת בצל" (fix round, C-23) |
 | `onion.toggle.tooltip` | שכבת בצל (O) | |
-| `onion.toggle.on.aria` | שכבת בצל פועלת | |
-| `onion.toggle.off.aria` | שכבת בצל כבויה | |
-| `onion.prev` | קודמים (אדום) | Count control, 0 to 2 |
-| `onion.prev.aria` | כמה פריימים קודמים להראות: {n} | |
+| `onion.toggle.on.aria` | להציג שכבת בצל: פועלת | Starts with the visible label (WCAG 2.5.3) |
+| `onion.toggle.off.aria` | להציג שכבת בצל: כבויה | |
+| `onion.prev` | הקודמים (אדום) | Count control, 0 to 2 |
+| `onion.prev.aria` | כמה מהפריימים הקודמים להראות: {n} | |
 | `onion.next` | הבאים (כחול) | Count control, 0 to 2 |
-| `onion.next.aria` | כמה פריימים הבאים להראות: {n} | |
+| `onion.next.aria` | כמה מהפריימים הבאים להראות: {n} | |
 | `canvasSize.title` | גודל הדף | Section title |
 | `canvasSize.wide` | 4:3 | Option (480×360) |
-| `canvasSize.wide.aria` | רחב, 480 על 360 | |
+| `canvasSize.wide.aria` | 4:3, רחב, 480 על 360 | |
 | `canvasSize.square` | ריבוע | Option (360×360) |
 | `canvasSize.square.aria` | ריבוע, 360 על 360 | |
 | `clearFrame` | ניקוי הפריים | Action |
-| `clearFrame.aria` | למחוק את כל הציור בפריים הזה | |
+| `clearFrame.aria` | ניקוי הפריים: למחוק את כל הציור בפריים הזה | |
 
 ---
 
@@ -250,7 +258,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 |---|---|---|
 | `strip.frame.aria` | פריים {n} מתוך {total} | Thumbnail accessible name |
 | `strip.frame.current.aria` | , נבחר | Appended to the current frame |
-| `strip.frame.hold.aria` | , מוחזק ×{hold} | Appended when hold > 1 |
+| `strip.frame.hold.aria` | , מוחזק פי {hold} | Appended when hold > 1. "פי", not "×": the sign is not read reliably by screen readers |
 | `strip.frame.key.aria` | , פריים מוכן, נעול | Appended on lesson key frames |
 | `strip.frame.blank.aria` | , פריים ריק לציור | Appended on lesson blanks still empty |
 | `strip.hold.badge` | ×{hold} | Lamp chip on the cell |
@@ -267,8 +275,8 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `frameMenu.insertBlank` | פריים ריק אחרי זה | |
 | `frameMenu.hold` | החזקה | Control label, ×1 to ×12 |
 | `frameMenu.hold.hint` | כמה זמן הפריים נשאר על המסך | Helper, 1 line |
-| `frameMenu.hold.value.aria.one` | החזקה ×1: אורך רגיל | Default value |
-| `frameMenu.hold.value.aria.other` | החזקה ×{hold}: הפריים נשאר על המסך פי {hold} | ×2 to ×12 |
+| `frameMenu.hold.value.aria.one` | החזקה פי 1: אורך רגיל | Default value |
+| `frameMenu.hold.value.aria.other` | החזקה פי {hold}: הפריים נשאר על המסך פי {hold} זמן | ×2 to ×12 |
 | `frameMenu.delete` | למחוק | |
 | `frameMenu.delete.disabled` | צריך לפחות פריים אחד | Reason when only 1 frame exists |
 
@@ -283,10 +291,10 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `play.stop` | עצירה | Stop label (the icon turns to ■) |
 | `play.stop.aria` | עצירה (רווח) | |
 | `play.play.disabled` | צריך לפחות 2 פריימים | Tooltip when there is 1 frame |
-| `play.prev` | פריים קודם | aria-label |
-| `play.prev.tooltip` | פריים קודם (חץ שמאלה) | Key names spelled out, so no arrow points against the text |
-| `play.next` | פריים הבא | aria-label |
-| `play.next.tooltip` | פריים הבא (חץ ימינה) | |
+| `play.prev` | הפריים הקודם | aria-label |
+| `play.prev.tooltip` | הפריים הקודם (חץ שמאלה) | Key names spelled out, so no arrow points against the text |
+| `play.next` | הפריים הבא | aria-label |
+| `play.next.tooltip` | הפריים הבא (חץ ימינה) | |
 | `play.fps.label` | מהירות | Group label |
 | `play.fps.tooltip` | פריימים בשנייה | |
 | `play.fps.option` | {fps} | Segment text: 6, 12, 24 |
@@ -294,7 +302,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `play.mode.loop` | לולאה | Toggle state |
 | `play.mode.pingpong` | הלוך ושוב | Toggle state |
 | `play.mode.aria` | מצב ניגון: {mode} | |
-| `play.mode.tooltip` | לולאה: מההתחלה שוב. הלוך ושוב: קדימה ואחורה | |
+| `play.mode.tooltip` | לולאה: מההתחלה שוב. הלוך ושוב: קדימה ואחורה. | |
 | `play.gate.label` | {n}/{total} | Gate counter during Play |
 | `play.started.aria` | מתנגן, {fps} פריימים בשנייה | Live region |
 | `play.stopped.aria` | נעצר בפריים {n} | Live region |
@@ -312,11 +320,11 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `lessonMode.hints` | רמזים | Switch label (lessons 2, 6, 7, 10 only) |
 | `lessonMode.hints.on.aria` | רמזים מוצגים | |
 | `lessonMode.hints.off.aria` | רמזים מוסתרים | |
-| `lessonMode.keyFrame` | זה פריים מוכן. ציירו בפריימים הריקים | Toast when drawing on a locked key frame |
+| `lessonMode.keyFrame` | זה פריים מוכן. ציירו בפריימים הריקים. | Toast when drawing on a locked key frame |
 | `lessonMode.lock.aria` | פריים מוכן, נעול | Lock chip on the canvas |
 | `lessonMode.addDisabled` | בשיעור מספר הפריימים קבוע | Tooltip on disabled "+", delete, reorder |
 | `lessonMode.holdDisabled` | בשיעור הזה אין החזקה | Hold control disabled (all lessons except 9) |
-| `lessonMode.nudgePlay` | כל הפריימים צוירו. לחצו על הפעלה כדי לסיים | Toast once, when every blank is filled but Play was not pressed yet |
+| `lessonMode.nudgePlay` | כל הפריימים צוירו. לחצו על ▶︎ (הפעלה) כדי לסיים. | Toast once, when every blank is filled but Play was not pressed yet. Glyph plus word, as in `coach.3` (fix round R41) |
 | `lessonDone.title` | קיבלתם חותמת | Completion sheet title |
 | `lessonDone.body` | שיעור {n}: {lessonName} | Line under the stamp |
 | `lessonDone.stamp.aria` | חותמת על שיעור {n}, {lessonName} | |
@@ -324,9 +332,9 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `lessonDone.last` | לכל השיעורים | Primary after lesson 12 (no next lesson) |
 | `lessonDone.keepDrawing` | להמשיך לצייר | Secondary |
 | `lessonDone.makeMine` | להפוך לפרויקט שלי | Tertiary |
-| `lessonDone.makeMine.hint` | עותק חופשי, בלי פריימים נעולים. החותמת נשארת | Helper under tertiary |
+| `lessonDone.makeMine.hint` | עותק חופשי, בלי פריימים נעולים. החותמת נשארת. | Helper under tertiary |
 | `lessonDone.unlock` | חדש בגלריה: להתחיל מ{starter} | Shown only when this lesson unlocks a starter for the first time. `{starter}` from §20 |
-| `lessonDone.madeMine.toast` | נוצר עותק: {title} | After "להפוך לפרויקט שלי" |
+| `lessonDone.madeMine.toast` | העותק מוכן: {title} | After "להפוך לפרויקט שלי". `{title}` already ends in "(עותק)", so the toast no longer says "copy" twice |
 
 ---
 
@@ -334,8 +342,8 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
-| `editor.loading` | טוען את הציור… | Loading state (skeleton strip), also aria-busy text |
-| `notFound.title` | הפרויקט לא נמצא במכשיר הזה | Editor and Print, id not on this device |
+| `editor.loading` | טוענים את הציור… | Loading state (skeleton strip), also aria-busy text |
+| `notFound.title` | הפרויקט לא נמצא בדפדפן הזה | Editor and Print, id not in this browser. Same place name as `notFound.body` and `w1.title` (fix round R40) |
 | `notFound.body` | פרויקטים נשמרים רק בדפדפן שבו יצרתם אותם. יש לכם קובץ פרויקט? אפשר לייבא אותו בגלריה. | |
 | `notFound.gallery` | לגלריה | Button |
 | `notFound.new` | אנימציה חדשה | Button |
@@ -347,8 +355,8 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | Key | Hebrew | Where / notes |
 |---|---|---|
 | `w1.title` | העבודות שמורות רק בדפדפן הזה | Banner, Home and Gallery |
-| `w1.body` | יש דפדפנים שמוחקים אותן אחרי שבוע בלי כניסה. קובץ גיבוי שומר עליהן. | "שבוע" traces to Safari's 7-day rule in the brief; "יש דפדפנים" keeps it true for Chrome |
-| `w1.action` | לשמור גיבוי | Secondary button; downloads the full backup |
+| `w1.body` | יש דפדפנים שמוחקים אותן אם לא פותחים את FlipLoop שבוע. קובץ גיבוי שומר עליהן. | "שבוע" traces to Safari's 7-day rule in the brief; "יש דפדפנים" keeps it true for Chrome. "בלי כניסה" also read as "without login" |
+| `w1.action` | לגבות הכל | Secondary button; downloads the full backup. Same label as `gallery.backup` and `settings.backup` (R40) |
 | `w1.dismiss.aria` | לסגור את ההודעה | |
 | `w2.text` | האחסון במכשיר כמעט מלא ({percent}%) | Editor top-bar strip and Gallery, 1 line |
 | `w2.action` | לגלריה | Button in the Editor strip only. In the Gallery the banner shows `w2.text` plus `w2.gallery.hint` and no "לגלריה" button (it would point to the current screen) |
@@ -369,7 +377,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `w4.remaining.other` | נשארו {n} פריימים | Warn chip, 100 to 118 (100 shows "נשארו 20 פריימים") |
 | `w4.max` | 120 פריימים, זה המקסימום | At 120 |
 | `w4.add.disabled` | אי אפשר להוסיף: 120 פריימים זה המקסימום | Tooltip / aria on the disabled "+" |
-| `w5.text` | הזיכרון מתמלא: בפריים הזה נשמרים 50 צעדי ביטול, בשאר פחות. | Film toast, 2 lines max, once per session |
+| `w5.text` | הזיכרון מתמלא: בפריים הזה אפשר לחזור 50 צעדים אחורה, בשאר פחות. | Film toast, 2 lines max, once per session |
 | `w5.close` | הבנתי | 44px close |
 
 ---
@@ -387,7 +395,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `export.gif.size.half` | חצי ({w}×{h}), קובץ קטן יותר | 240×180 or 180×180 |
 | `export.gif.action` | להכין GIF | Primary |
 | `export.video.h3` | וידאו | Card 2 |
-| `export.video.line` | MP4 או WebM, לפי מה שהדפדפן תומך בו | 1 Muted line |
+| `export.video.line` | סרטון קצר לשמירה ולשליחה (MP4 או WebM) | 1 Muted line |
 | `export.video.action` | להקליט וידאו | Secondary |
 | `export.video.disabled` | הדפדפן הזה לא יודע להקליט וידאו. נסו GIF. | Card disabled (no MediaRecorder); replaces the Muted line |
 | `export.print.h3` | גיליון הדפסה | Card 3 |
@@ -400,7 +408,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `export.progress.gif.aria` | מכינים GIF, פריים {n} מתוך {total} | |
 | `export.progress.video` | {s}/{total} שניות | Under the progress bar |
 | `export.progress.video.aria` | מקליטים וידאו, {s} מתוך {total} שניות | |
-| `export.video.realtime` | ההקלטה בזמן אמת. השאירו את הלשונית פתוחה עד הסוף. | Under the recording canvas. True: a hidden tab freezes the recording |
+| `export.video.realtime` | ההקלטה נמשכת כמו האנימציה עצמה. השאירו את המסך הזה פתוח עד הסוף. | Under the recording canvas. True: a hidden tab freezes the recording |
 | `export.video.format` | הקובץ יהיה {ext} | Shown once the probe picks a type (MP4 or WebM) |
 | `export.cancel` | ביטול | Tertiary, during encoding / recording |
 | `export.cancelled` | הייצוא בוטל. שום דבר לא נשמר. | Toast |
@@ -410,10 +418,10 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `export.done.download` | להוריד | Primary |
 | `export.done.share` | לשתף | Secondary, only if `navigator.canShare({files})` |
 | `export.share.text` | ציירתי את זה ב-FlipLoop | Text passed to `navigator.share` |
-| `export.done.project` | קובץ הפרויקט ירד: {filename} | Toast after the project file downloads |
+| `export.done.project` | קובץ הפרויקט של "{title}" ירד. | Toast after the project file downloads. Names the project, not the file: a mixed-direction file name ("האנימציה שלי 1.fliploop.json") scrambles in a Hebrew line (fix round R42). Call sites pass `title` (K6) |
 | `export.error.gif` | יצירת ה-GIF נכשלה. נסו שוב, או בגודל חצי. | Error state |
 | `export.error.video` | ההקלטה נכשלה. נסו שוב, או הכינו GIF. | Error state |
-| `export.error.videoHidden` | ההקלטה נעצרה כי הלשונית הוסתרה. נסו שוב והשאירו אותה פתוחה. | Error state, only if Developer detects `visibilityState` hidden mid-recording |
+| `export.error.videoHidden` | ההקלטה נעצרה כי יצאתם מהמסך. נסו שוב והשאירו אותו פתוח. | Error state, only if Developer detects `visibilityState` hidden mid-recording |
 | `export.error.videoEmpty` | הדפדפן הזה יצר קובץ וידאו ריק. נסו GIF. | Empty Blob fallback |
 | `export.error.videoEmpty.action` | להכין GIF | Button in that state, switches to the GIF card |
 | `export.error.retry` | לנסות שוב | Button in error states |
@@ -430,7 +438,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `print.paper.label` | גודל נייר | |
 | `print.paper.a4` | A4 | |
 | `print.paper.letter` | Letter | |
-| `print.pingpong` | להוסיף את פריימי החזרה (הלוך ושוב) | Checkbox, off by default, only when play mode is ping-pong |
+| `print.pingpong` | להדפיס גם את הדרך חזרה (הלוך ושוב) | Checkbox, off by default, only when play mode is ping-pong |
 | `print.summary` | {cardsText} · {sheetsText} | Under options. Join the two plural keys below with " · ", e.g. "96 כרטיסים · 12 גיליונות", "2 כרטיסים · גיליון אחד" |
 | `print.summary.cards.one` | כרטיס אחד | |
 | `print.summary.cards.other` | {cards} כרטיסים | |
@@ -445,10 +453,10 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `print.action.pdf` | להוריד PDF | **Primary** (Part C, Ruling 2) |
 | `print.action.print` | להדפיס | Secondary, opens the print dialog |
 | `print.action.png` | להוריד PNG | Secondary, all sheets |
-| `print.action.pngSheet` | PNG גיליון {n} | Per-sheet button |
-| `print.action.pngSheet.aria` | להוריד את גיליון {n} כ-PNG | |
+| `print.action.pngSheet` | להוריד גיליון {n} (PNG) | Per-sheet button. Starts with the verb, like every other button |
+| `print.action.pngSheet.aria` | להוריד גיליון {n} (PNG) | Same as the visible text (WCAG 2.5.3) |
 | `print.dialogTip` | בחלון ההדפסה בחרו קנה מידה 100%, כדי שהכרטיסים יצאו בגודל הנכון. | Helper under "להדפיס" |
-| `print.multiDownloadTip` | הדפדפן עשוי לשאול אם לאפשר כמה הורדות. אם לא, יש כפתור לכל גיליון. | Helper under "להוריד PNG" |
+| `print.multiDownloadTip` | הדפדפן עשוי לשאול אם לאפשר כמה הורדות. אם ירד רק קובץ אחד, יש למטה כפתור לכל גיליון. | Helper under "להוריד PNG", only when there is more than one sheet |
 | `print.done.pdf.one` | ה-PDF ירד: גיליון אחד | Toast, 1 sheet |
 | `print.done.pdf.other` | ה-PDF ירד: {sheets} גיליונות | Toast |
 | `print.done.png.one` | ירד קובץ PNG אחד | Toast, 1 sheet |
@@ -481,7 +489,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `lessons.station.next.aria` | , הבא בתור | Appended |
 | `lessons.nextUp` | הבא בתור | Lamp pill on the lowest undone station |
 | `lessons.allDone.title` | סיימתם את כל 12 השיעורים | Finished banner |
-| `lessons.allDone.body` | 12 חותמות. כל ציור מוכן מחכה לכם בגלריה. | True: all 4 starters are unlocked by then |
+| `lessons.allDone.body` | 12 חותמות. כל ארבעת הציורים המוכנים פתוחים עכשיו בגלריה. | True: all 4 starters are unlocked by then |
 
 ---
 
@@ -491,14 +499,14 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 |---|---|---|
 | `lesson.h1` | {lessonName} | |
 | `lesson.number` | שיעור {n} מתוך 12 | Muted, above or under the H1 |
-| `lesson.what.h2` | מה זה | |
+| `lesson.what.h2` | מה זה? | |
 | `lesson.what.body` | {explanation} | From `lessons.js` |
 | `lesson.example.h2` | דוגמה | |
 | `lesson.example.aria` | דוגמה מונפשת: {lessonName} | Mini player |
 | `lesson.example.play` | הפעלה | Mini player (reduced motion: paused) |
 | `lesson.example.stop` | עצירה | |
-| `lesson.example.prev` | פריים קודם | Step button, reduced motion |
-| `lesson.example.next` | פריים הבא | Step button, reduced motion |
+| `lesson.example.prev` | הפריים הקודם | Step button, reduced motion |
+| `lesson.example.next` | הפריים הבא | Step button, reduced motion |
 | `lesson.exercise.h2` | התרגיל | |
 | `lesson.exercise.goal` | {goal} | From `lessons.js` |
 | `lesson.exercise.frames` | {total} פריימים, {k} מוכנים | e.g. "8 פריימים, 2 מוכנים" |
@@ -519,9 +527,9 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 |---|---|---|
 | `challenge.h1` | האתגר של השבוע | |
 | `challenge.theme` | {theme} | H2 on the film slate, from §19 |
-| `challenge.meta.days.other` | שבוע {week} · נשארו {days} ימים | e.g. "שבוע 39 · נשארו 6 ימים" (days 3 to 7) |
-| `challenge.meta.days.two` | שבוע {week} · נשארו יומיים | Friday |
-| `challenge.meta.days.last` | שבוע {week} · יום אחרון | Saturday |
+| `challenge.meta.days.other` | אתגר {week} · נשארו {days} ימים | e.g. "אתגר 39 · נשארו 6 ימים" (days 3 to 7). The number counts FlipLoop challenges since the start, not the calendar week, so it is called "אתגר" (fix round R20) |
+| `challenge.meta.days.two` | אתגר {week} · נשארו יומיים | Friday |
+| `challenge.meta.days.last` | אתגר {week} · יום אחרון | Saturday |
 | `challenge.meta.noWeek.other` | נשארו {days} ימים | Device clock before the epoch (drop the week number) |
 | `challenge.meta.noWeek.two` | נשארו יומיים | |
 | `challenge.meta.noWeek.last` | יום אחרון | |
@@ -531,7 +539,7 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `challenge.stampRule` | חותמת מתקבלת כשיש 2 פריימים מצוירים. | Muted, shown while joined but not yet counted |
 | `challenge.stamps.h2` | האתגרים שלי | Plan had "האתגרים שלך"; first person matches "העבודות שלי" |
 | `challenge.stamps.empty` | הצטרפו לאתגר הראשון שלכם | Beside the dashed empty circle |
-| `challenge.stamp.aria` | שבוע {week}: {theme} | Each stamp |
+| `challenge.stamp.aria` | אתגר {week}: {theme} | Each stamp |
 | `challenge.projectTitle` | {theme} | Title of the challenge project |
 
 ---
@@ -553,13 +561,13 @@ Every theme is 1 to 3 words, at most 16 characters (spaces counted), brand-free,
 | 8 | 1.3 | מסכה מחייכת | 11 |
 | 9 | 8.3 | קופסת הפתעות | 12 |
 | 10 | 15.3 | דבורה על פרח | 12 |
-| 11 | 22.3 | פרפר | 4 |
+| 11 | 22.3 | פרפר מרפרף | 10 |
 | 12 | 29.3 | כלב מכשכש | 9 |
 | 13 | 5.4 | ביצה בוקעת | 10 |
 | 14 | 12.4 | עפיפון ברוח | 11 |
-| 15 | 19.4 | זיקוקים | 7 |
+| 15 | 19.4 | זיקוקים בשמיים | 14 |
 | 16 | 26.4 | דגל מתנופף | 10 |
-| 17 | 3.5 | מדורה | 5 |
+| 17 | 3.5 | מדורה בוערת | 11 |
 | 18 | 10.5 | חילזון זוחל | 11 |
 | 19 | 17.5 | צפרדע קופצת | 11 |
 | 20 | 24.5 | מטוס נייר | 9 |
@@ -569,15 +577,15 @@ Every theme is 1 to 3 words, at most 16 characters (spaces counted), brand-free,
 | 24 | 21.6 | כדור פורח | 9 |
 | 25 | 28.6 | גלידה נמסה | 10 |
 | 26 | 5.7 | גל בים | 6 |
-| 27 | 12.7 | מדוזה | 5 |
-| 28 | 19.7 | תמנון | 5 |
+| 27 | 12.7 | מדוזה צפה | 9 |
+| 28 | 19.7 | תמנון מנופף | 11 |
 | 29 | 26.7 | פיל מתיז מים | 12 |
 | 30 | 2.8 | שמש זורחת | 9 |
 | 31 | 9.8 | קשת בענן | 8 |
 | 32 | 16.8 | זריקה לסל | 9 |
 | 33 | 23.8 | רכבת נוסעת | 10 |
 | 34 | 30.8 | שעון מעורר | 10 |
-| 35 | 6.9 | תפוח טובל בדבש | 14 |
+| 35 | 6.9 | תפוח בדבש | 9 |
 | 36 | 13.9 | ציפור עפה | 9 |
 | 37 | 20.9 | עלה נושר | 8 |
 | 38 | 27.9 | חללית ממריאה | 12 |
@@ -589,7 +597,7 @@ Every theme is 1 to 3 words, at most 16 characters (spaces counted), brand-free,
 | 44 | 8.11 | עכבר בורח | 9 |
 | 45 | 15.11 | דינוזאור צועד | 13 |
 | 46 | 22.11 | הר געש מתפרץ | 12 |
-| 47 | 29.11 | קנגורו | 6 |
+| 47 | 29.11 | קנגורו קופץ | 11 |
 | 48 | 6.12 | סביבון מסתובב | 13 |
 | 49 | 13.12 | כוכב נופל | 9 |
 | 50 | 20.12 | פרצוף מופתע | 11 |
@@ -601,21 +609,23 @@ Paste-ready:
 export const THEMES = [
   "מטרייה נפתחת", "טיפה בשלולית", "כדור שלג מתגלגל", "פינגווין מחליק",
   "שתיל צומח", "חתול מתמתח", "לב פועם", "צב מציץ",
-  "מסכה מחייכת", "קופסת הפתעות", "דבורה על פרח", "פרפר",
-  "כלב מכשכש", "ביצה בוקעת", "עפיפון ברוח", "זיקוקים",
-  "דגל מתנופף", "מדורה", "חילזון זוחל", "צפרדע קופצת",
+  "מסכה מחייכת", "קופסת הפתעות", "דבורה על פרח", "פרפר מרפרף",
+  "כלב מכשכש", "ביצה בוקעת", "עפיפון ברוח", "זיקוקים בשמיים",
+  "דגל מתנופף", "מדורה בוערת", "חילזון זוחל", "צפרדע קופצת",
   "מטוס נייר", "רובוט רוקד", "בועת סבון", "דג שוחה",
-  "כדור פורח", "גלידה נמסה", "גל בים", "מדוזה",
-  "תמנון", "פיל מתיז מים", "שמש זורחת", "קשת בענן",
-  "זריקה לסל", "רכבת נוסעת", "שעון מעורר", "תפוח טובל בדבש",
+  "כדור פורח", "גלידה נמסה", "גל בים", "מדוזה צפה",
+  "תמנון מנופף", "פיל מתיז מים", "שמש זורחת", "קשת בענן",
+  "זריקה לסל", "רכבת נוסעת", "שעון מעורר", "תפוח בדבש",
   "ציפור עפה", "עלה נושר", "חללית ממריאה", "הגשם הראשון",
   "נחש מתפתל", "אריה שואג", "ינשוף ממצמץ", "גלגל ענק",
-  "עכבר בורח", "דינוזאור צועד", "הר געש מתפרץ", "קנגורו",
+  "עכבר בורח", "דינוזאור צועד", "הר געש מתפרץ", "קנגורו קופץ",
   "סביבון מסתובב", "כוכב נופל", "פרצוף מופתע", "פיהוק גדול"
 ];
 ```
 
-Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "חללית ממריאה", label "שבוע 39 · נשארו 6 ימים".
+Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "חללית ממריאה", label "אתגר 39 · נשארו 6 ימים".
+
+Fix round 2026-10 (R45): the six themes that were a bare noun now name their movement (11 "פרפר מרפרף", 15 "זיקוקים בשמיים", 17 "מדורה בוערת", 27 "מדוזה צפה", 28 "תמנון מנופף", 47 "קנגורו קופץ"), and 35 is "תפוח בדבש" (the apple is the one being dipped, so "טובל" was the wrong voice). 9 "קופסת הפתעות" stays: "קופסת הפתעות נפתחת" is 18 characters, over the 16 limit. Longest theme is still 15.
 
 ---
 
@@ -623,7 +633,7 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
-| `gallery.h1` | העבודות שלי | |
+| `gallery.h1` | הגלריה שלי | Eight strings already say "גלריה" ("לגלריה", "בגלריה"); the screen now has the same name (fix round R40) |
 | `gallery.cta.new` | אנימציה חדשה | Primary |
 | `gallery.import` | לייבא קובץ | Secondary, accepts `.json` |
 | `gallery.import.aria` | לייבא קובץ פרויקט או גיבוי | |
@@ -634,7 +644,7 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 | `gallery.starter.stick` | איש מקלות | |
 | `gallery.starter.character` | דמות מנופפת | |
 | `gallery.starter.aria` | אנימציה חדשה מתוך: {starter} | |
-| `gallery.projects.h2` | פרויקטים | |
+| `gallery.projects.h2` | האנימציות שלי | "אנימציה" is the work ("אנימציה חדשה"); "קובץ" is the file (R40) |
 | `gallery.card.frames` | see `common.frames.*` | "8 פריימים" |
 | `gallery.card.menu.aria` | אפשרויות עבור {title} | 44px menu button |
 | `gallery.menu.open` | לפתוח | |
@@ -645,8 +655,8 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 | `gallery.empty.title` | עוד אין עבודות | Empty state |
 | `gallery.empty.body` | כל מה שתציירו יישמר כאן, במכשיר הזה. | |
 | `gallery.empty.cta` | אנימציה חדשה | |
-| `gallery.loading.aria` | טוען עבודות… | Skeleton cards |
-| `gallery.duplicate.done` | נוצר עותק: {title} | Toast |
+| `gallery.loading.aria` | טוענים עבודות… | Skeleton cards |
+| `gallery.duplicate.done` | העותק מוכן: {title} | Toast. `{title}` already ends in "(עותק)" |
 | `gallery.duplicate.freeNote` | העותק פתוח לעריכה חופשית, בלי פריימים נעולים | Toast, 2nd line, when duplicating a lesson or challenge project |
 | `rename.title` | שינוי שם | Dialog |
 | `rename.label` | שם | |
@@ -682,7 +692,7 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 | `settings.storage.meter` | {used} / {quota} · {percent}% | e.g. "124 MB / 2.1 GB · 6%" |
 | `settings.storage.meter.aria` | בשימוש {used} מתוך {quota}, {percent} אחוז | |
 | `settings.storage.unknown` | הדפדפן לא מדווח כמה מקום יש | When `estimate()` is missing |
-| `settings.protected.label` | מוגן ממחיקה | Label before yes/no |
+| `settings.protected.label` | מוגן ממחיקה: | Label before yes/no. The colon keeps "מוגן ממחיקה לא" from reading as one sentence |
 | `settings.protected.yes` | כן | |
 | `settings.protected.no` | לא | |
 | `settings.protected.yes.hint` | הדפדפן לא ימחק את העבודות לבד כשחסר לו מקום. | |
@@ -690,16 +700,16 @@ Worked check: on 2026-09-28, weekIndex = 38, so the theme is `THEMES[38]` = "ח�
 | `settings.lastBackup` | גיבוי אחרון: {date} | |
 | `settings.lastBackup.never` | עוד לא נשמר גיבוי | |
 | `settings.backup` | לגבות הכל | Secondary |
-| `settings.import` | לייבא | Secondary |
+| `settings.import` | לייבא קובץ | Secondary. Same label as `gallery.import` (R40) |
 | `settings.help.h2` | עזרה | |
 | `settings.tips.reset` | להציג שוב טיפים | Resets coach marks and `firstPlaySeen` (Ruling 4) |
 | `settings.tips.done` | הטיפים יופיעו שוב בפעם הבאה שתציירו | Toast |
-| `settings.undoNote` | צעדי הביטול נמחקים כשמרעננים או סוגרים את הדף. הציורים עצמם נשמרים. | |
-| `settings.motionNote` | התנועה באתר מתאימה להגדרת הפחתת התנועה של המכשיר. | Optional line |
+| `settings.undoNote` | אחרי שמרעננים או סוגרים את הלשונית אי אפשר לחזור צעד אחורה. הציורים עצמם נשמרים. | "הלשונית", not "הדף": "דף" is the canvas |
+| `settings.motionNote` | אם ביקשתם במכשיר פחות תנועה, גם כאן יהיו פחות אנימציות. | Optional line |
 | `settings.about.h2` | אודות | |
 | `settings.about.name` | FlipLoop | |
 | `settings.about.privacy` | בלי חשבון ובלי שרת. הציורים לא יוצאים מהמכשיר. | "The drawings", not "nothing": the Google Fonts link is a network call |
-| `settings.about.credit` | 12 העקרונות לקוחים מהספר The Illusion of Life של פרנק תומס ואולי ג'ונסטון (1981). ההסברים כאן נכתבו מחדש. | Credit by title (plan) |
+| `settings.about.credit` | 12 העקרונות לקוחים מהספר The Illusion of Life של אולי ג'ונסטון ופרנק תומס (1981). ההסברים כאן נכתבו מחדש. | Credit by title (plan). Names swapped: "ואולי ג'ונסטון" read as "and maybe Johnston" (fix round R44) |
 
 ---
 
@@ -727,19 +737,19 @@ Settings card between Storage and Help. Only one of the three state lines shows:
 |---|---|---|
 | `toast.frameAdded.aria` | נוסף פריים {n} | Live region only |
 | `toast.frameDuplicated` | פריים {n} שוכפל | After duplicate |
-| `toast.frameDeleted` | פריים {n} נמחק | After delete, 5 s, with `common.undo` |
-| `toast.frameCleared` | הפריים נוקה | After "ניקוי הפריים", with `common.undo` |
+| `toast.frameDeleted` | פריים {n} נמחק | After delete, 5 s, with `common.undo` ("להחזיר") |
+| `toast.frameCleared` | הפריים נוקה | After "ניקוי הפריים", with `common.undo` ("להחזיר") |
 | `toast.canvasResized.wide` | גודל הדף שונה ל-4:3 | After a change to 4:3. "4:3" inside the `.num` isolate |
 | `toast.canvasResized.square` | גודל הדף שונה לריבוע | After a change to square |
-| `lessonMode.keyFrame` | זה פריים מוכן. ציירו בפריימים הריקים | §11 |
-| `lessonMode.nudgePlay` | כל הפריימים צוירו. לחצו על הפעלה כדי לסיים | §11 |
-| `lessonDone.madeMine.toast` | נוצר עותק: {title} | §11 |
+| `lessonMode.keyFrame` | זה פריים מוכן. ציירו בפריימים הריקים. | §11 |
+| `lessonMode.nudgePlay` | כל הפריימים צוירו. לחצו על ▶︎ (הפעלה) כדי לסיים. | §11 |
+| `lessonDone.madeMine.toast` | העותק מוכן: {title} | §11 |
 | `w3.recovered` | השמירה חזרה לעבוד | §13 |
 | `w5.text` | (see §13) | §13 |
 | `export.cancelled` | הייצוא בוטל. שום דבר לא נשמר. | §14 |
-| `export.done.project` | קובץ הפרויקט ירד: {filename} | §14 |
+| `export.done.project` | קובץ הפרויקט של "{title}" ירד. | §14 |
 | `print.done.pdf.*` / `print.done.png.*` | (see §15) | §15 |
-| `gallery.duplicate.done` | נוצר עותק: {title} | §20 |
+| `gallery.duplicate.done` | העותק מוכן: {title} | §20 |
 | `delete.done` | "{title}" נמחק | §20 |
 | `import.done.*` | (see §20) | §20 |
 | `backup.done` | הגיבוי ירד: {filename} | §20 |
@@ -797,6 +807,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 - **Addressing decision (flag for Gatekeeper and for the `lessons` spawn):** plural imperative for sentences, infinitive for buttons, nouns for tools and headings, "שלי" for the user's own things. This replaces every masculine-singular sample in the plan ("צייר", "הוסף", "לחץ", "ייבא", "גבה", "הורד", "התחל", "הצטרף", "שלך"). Alternative considered: keep the plan's singular masculine, which is shorter by 1 or 2 letters. Rejected, because `hebrew-writing-skill.md` rule 6 treats it as a standard exclusion check, and the audience is every kid, not only boys.
 - **Deliberate deviations from the plan's sample strings, each forced by a binding limit or rule:** "לשיעורים" to "למסלול" (7-char Back limit); "לא נשמר" to "נכשל" (one-word status); W3 cut from 3 sentences to 2 (2-line limit); the GIF "הכי נוח" line (superlative); "האתגר השבועי" to "האתגר של השבוע" in the manifest (one name for one thing). The Print Back label is "לציור" (the plan names no label; "לעורך" is jargon for a kid).
 - **For Developer:** `export.error.videoHidden`, `import.error.newer`, `sheet.label.staple` and `sheet.label.cut` are ready if you build those paths; they are not required by the plan.
+- **Fix round 2026-10 (rows changed in place, by the copy audit `_process/audit/08-copy.md` and rulings R38 to R45 of `_process/12-fix-direction.md`):** two of the deviations above are reversed, each for a measured reason. "למסלול" is "לשיעורים" again: the screen it returns to is titled "שיעורים", and 8 characters fit the header at 320px. "נכשל" is "לא נשמר": the one-word form was masculine and vague, and under 360px the status shows its icon only. Undo and Redo are "אחורה" and "קדימה", so "ביטול" has one meaning. New strings of the round are in section 24 (other workstreams) and, for WS6, in their own sections: `home.art.pause.aria`, `home.art.play.aria`, `home.cta.lessons.aria.one`, `home.cta.lessons.aria.other`.
 - **Char checks:** all 52 themes are 16 chars or fewer (longest: "כדור שלג מתגלגל", 15), with no duplicates; all Back labels are 7 or fewer; all three status words are one word; zero em or en dashes in this file (checked by script).
 
 ---
