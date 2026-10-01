@@ -17,7 +17,3 @@ export function tp(base, n, params = {}) {
   if (n === 2 && STRINGS[base + ".two"] !== undefined) return t(base + ".two", all);
   return t(base + ".other", all);
 }
-
-export function has(key) {
-  return STRINGS[key] !== undefined;
-}

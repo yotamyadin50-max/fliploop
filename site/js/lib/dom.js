@@ -57,11 +57,3 @@ export function richText(text) {
   if (last < text.length) frag.append(text.slice(last));
   return frag;
 }
-
-export function qs(sel, root = document) {
-  return root.querySelector(sel);
-}
-
-export function qsa(sel, root = document) {
-  return [...root.querySelectorAll(sel)];
-}

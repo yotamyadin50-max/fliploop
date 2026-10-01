@@ -1,7 +1,7 @@
 // Home (plan 1): header links, display H1, the light table, one primary action and two
 // secondary cards, "continue" link, W1 slot.
 import { h, clear } from "../lib/dom.js";
-import { t } from "../lib/i18n.js";
+import { t, tp } from "../lib/i18n.js";
 import { reducedMotion } from "../lib/util.js";
 import { iconEl } from "../ui/icons.js";
 import { lightTableSvg, animateFlipbook } from "./home-art.js";
@@ -45,7 +45,16 @@ export class HomeScreen {
     clear(this.section);
     const done = lessonsDoneCount();
     const theme = THEMES[weekInfo(new Date()).themeIndex];
-    const art = h("div", { class: "home__table", html: lightTableSvg() });
+    // The flipbook loops for as long as Home is open, so it can be paused (R37, WCAG 2.2.2):
+    // the art itself is the toggle button. With reduced motion nothing moves by itself, so
+    // it stays plain art that flips one page per tap, as before.
+    const reduced = reducedMotion();
+    const art = reduced
+      ? h("div", { class: "home__table", html: lightTableSvg() })
+      : h("button", { class: "home__table home__table--toggle", type: "button", "aria-label": t("home.art.pause.aria"), html: lightTableSvg(),
+        onclick: () => this.toggleFlip() });
+    if (!reduced) art.append(h("span", { class: "home__paused", "aria-hidden": "true" }, iconEl("play", { size: 20 })));
+    this.art = art;
     const w1Slot = h("div", { class: "home__w1" });
     this.continueSlot = h("div", { class: "home__continue" });
     this.header = siteHeader({ home: true });
@@ -59,15 +68,16 @@ export class HomeScreen {
         h("div", { class: "home__actions" },
           h("a", { class: "btn btn--primary btn--hero", href: "#/new", "aria-label": t("home.cta.new.aria") }, iconEl("pencil"), t("home.cta.new")),
           h("div", { class: "home__cards" },
-            h("a", { class: "home-card", href: "#/lessons", "aria-label": t("home.cta.lessons.aria", { done }) },
+            h("a", { class: "home-card", href: "#/lessons", "aria-label": tp("home.cta.lessons.aria", done, { done }) },
               h("span", { class: "home-card__title" }, iconEl("book", { size: 18 }), t("home.cta.lessons")),
-              h("span", { class: "home-card__meta" }, iconEl("stamp", { size: 18 }), h("span", { class: "num" }, t("home.cta.lessons.progress", { done })))),
+              // The stamp glyph means "completed" on the Lessons path, so it is Success only once a lesson is done (J-C3).
+              h("span", { class: "home-card__meta" + (done ? " home-card__meta--done" : "") }, iconEl("stamp", { size: 18 }), h("span", { class: "num" }, t("home.cta.lessons.progress", { done })))),
             h("a", { class: "home-card", href: "#/challenge", "aria-label": t("home.cta.challenge.aria", { theme }) },
               h("span", { class: "home-card__title" }, iconEl("flag", { size: 18 }), t("home.cta.challenge")),
               h("span", { class: "home-card__meta muted" }, t("home.cta.challenge.theme", { theme })))),
           this.continueSlot,
           w1Slot)));
-    this.stopFlip = animateFlipbook(art.querySelector("svg"), { reduced: reducedMotion() });
+    this.flip = animateFlipbook(art.querySelector("svg"), { reduced });
     const projects = await listProjects().catch(() => []);
     if (this.disposed) return;
     const last = projects[0];
@@ -79,9 +89,16 @@ export class HomeScreen {
     if (banner && !this.disposed) w1Slot.append(banner);
   }
 
+  toggleFlip() {
+    const paused = !this.flip.paused;
+    this.flip.setPaused(paused);
+    this.art.classList.toggle("is-paused", paused);
+    this.art.setAttribute("aria-label", t(paused ? "home.art.play.aria" : "home.art.pause.aria"));
+  }
+
   unmount() {
     this.disposed = true;
-    this.stopFlip?.();
+    this.flip?.stop();
     this.header?.dispose();
   }
 }
