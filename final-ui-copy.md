@@ -764,6 +764,33 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 
 ---
 
+## 24. Fix round 2026-10: new keys
+
+### 24.1 WS1
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+
+### 24.2 WS2
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+
+### 24.3 WS3
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+
+### 24.4 WS4
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+
+### 24.5 WS5
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+
 ### Notes
 
 - **Angle:** the researcher's recommended lead, "your drawing moves for the first time," lives in exactly two places so it stays strong: the Home subtitle (the promise) and `firstPlay.line` (the payoff). "הציור שלכם הפך לסרט" is the one deliberate pattern break. It names the film strip the user just watched run, instead of a generic "כל הכבוד". Everything else is plain, calm instruction, which the brief's Low/Feel reading asks for.

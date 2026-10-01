@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const uiMd = readFileSync(join(root, "final-ui-copy.md"), "utf8");
-const lessonsMd = readFileSync(join(root, "_process/05-copywriter-lessons.md"), "utf8");
+const lessonsMd = readFileSync(join(root, "final-lessons.md"), "utf8");
 
 const DASHES = /[–—]/;
 

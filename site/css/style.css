@@ -680,6 +680,11 @@
   .meter--warn .meter__fill { background: var(--warn-text); }
   .protected { display: flex; align-items: center; gap: var(--s-8); }
   .about__name { font: 700 var(--fs-h3)/1.2 var(--font-wordmark); }
+
+  /* ---- fix round: WS1 additions ---- */
+
+  /* ---- fix round: WS2 additions ---- */
+
 }
 
 /* ============ utilities ============ */
