@@ -33,8 +33,24 @@ export class MiniPlayer {
     this.el = h("div", { class: "mini" }, h("div", { class: "mini__table" }, this.canvas), this.strip, this.controls);
     this.show(0);
     this.playing = false;
+    this.resumeWhenVisible = false;
+    // A hidden tab gets no animation frames: pause there, and pick up again on return.
+    this.onVisibility = () => {
+      if (document.visibilityState !== "visible") {
+        this.resumeWhenVisible = this.playing;
+        if (this.playing) this.pause();
+      } else if (this.resumeWhenVisible) {
+        this.resumeWhenVisible = false;
+        this.play();
+      }
+    };
+    document.addEventListener("visibilitychange", this.onVisibility);
     if (!reducedMotion()) this.play();
     else this.renderToggle();
+  }
+
+  frameMs() {
+    return (this.frames[this.i].hold * 1000) / this.fps;
   }
 
   show(i) {
@@ -44,28 +60,40 @@ export class MiniPlayer {
     g.fillRect(0, 0, this.canvas.width, this.canvas.height);
     g.drawImage(this.frames[this.i].canvas, 0, 0);
     this.cells.forEach((c, k) => c.classList.toggle("is-current", k === this.i));
-    const cell = this.cells[this.i];
+    this.centerCell();
+  }
+
+  /** Keeps the current cell in the middle of the mini strip, measured inside the strip
+   *  (offsetLeft is relative to the offset parent, which is not the strip). */
+  centerCell() {
     const strip = this.strip;
-    const target = cell.offsetLeft - strip.clientWidth / 2 + cell.offsetWidth / 2;
-    if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft = target;
+    if (strip.scrollWidth <= strip.clientWidth) return;
+    const s = strip.getBoundingClientRect();
+    const c = this.cells[this.i].getBoundingClientRect();
+    strip.scrollLeft += c.left - s.left - (s.width - c.width) / 2;
   }
 
   step(d) {
+    this.resumeWhenVisible = false;
     this.pause();
     this.show(this.i + d);
   }
 
   play() {
+    cancelAnimationFrame(this.raf);
     this.playing = true;
     let last = performance.now();
-    let left = (this.frames[this.i].hold * 1000) / this.fps;
+    let left = this.frameMs();
     const tick = (now) => {
       if (!this.playing) return;
       left -= now - last;
       last = now;
-      while (left <= 0) {
+      if (left <= 0) {
+        // At most one frame per tick. After a long gap (a frozen or background tab) the
+        // missed frames are dropped, never replayed in a burst.
         this.show(this.i + 1);
-        left += (this.frames[this.i].hold * 1000) / this.fps;
+        const dur = this.frameMs();
+        left = left + dur > 0 ? left + dur : dur;
       }
       this.raf = requestAnimationFrame(tick);
     };
@@ -80,6 +108,7 @@ export class MiniPlayer {
   }
 
   toggle() {
+    this.resumeWhenVisible = false;
     if (this.playing) this.pause();
     else this.play();
   }
@@ -89,6 +118,8 @@ export class MiniPlayer {
   }
 
   destroy() {
+    document.removeEventListener("visibilitychange", this.onVisibility);
+    this.resumeWhenVisible = false;
     this.pause();
   }
 }
