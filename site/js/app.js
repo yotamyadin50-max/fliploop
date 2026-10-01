@@ -16,7 +16,7 @@ import { PrintScreen } from "./screens/print.js";
 import { EditorScreen } from "./editor/editor.js";
 import { showW2b } from "./ui/warnings.js";
 import { toast } from "./ui/toast.js";
-import { closeAllSheets } from "./ui/dialog.js";
+import { closeAllSheets, sheetsOpen, closeTopSheet } from "./ui/dialog.js";
 import { emit } from "./lib/bus.js";
 import { registerServiceWorker, swVersion, takeResume } from "./pwa.js";
 
@@ -49,6 +49,9 @@ export function parseRoute(hash) {
   return { redirect: "#/" };
 }
 
+const hashNow = () => location.hash || "#/";
+const sameParams = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
 class Router {
   constructor(main) {
     this.main = main;
@@ -58,7 +61,17 @@ class Router {
     this.pending = 0; // navigations queued or running
     this.arrived = false; // a screen was mounted since the last "route" event
     this.resume = null; // { y, view } from before an update reload, for the first screen only
-    addEventListener("hashchange", () => this.go());
+    // History rules (fix round R29, R30). Every in-app history entry carries, in history.state,
+    // its index (i), the hash it was opened from (from) and that entry's own origin (from2).
+    // A reload keeps the state, so the rules survive an update reload.
+    if (!Number.isInteger(history.state?.i)) history.replaceState({ i: 0, from: null, from2: null }, "", location.href);
+    this.entry = history.state; // state of the entry on screen
+    this.hash = hashNow(); // hash of the entry on screen
+    this.expect = null; // the hash a Back issued by the router itself must land on
+    // A link click fires popstate and hashchange for one move; the second call is a no-op.
+    addEventListener("hashchange", () => this.onHistory());
+    addEventListener("popstate", () => this.onHistory());
+    document.addEventListener("click", (e) => this.onBackClick(e));
   }
 
   /** True while a route change is queued or running (a screen may be saving or loading). */
@@ -70,13 +83,72 @@ class Router {
     document.title = screen ? t("meta.title.pattern", { screen }) : t("meta.title.home");
   }
 
+  onHistory() {
+    const hash = hashNow();
+    const state = history.state;
+    let move;
+    if (Number.isInteger(state?.i)) {
+      if (state.i === this.entry.i && hash === this.hash) return; // already handled
+      move = state.i < this.entry.i ? "back" : state.i > this.entry.i ? "forward" : "same";
+    } else {
+      // A new entry (a link, or location.hash = ...): record where it was opened from.
+      history.replaceState({ i: this.entry.i + 1, from: this.hash, from2: this.entry.from }, "", location.href);
+      move = "push";
+    }
+    this.entry = history.state;
+    this.hash = hash;
+    const expect = this.expect;
+    this.expect = null;
+    if (move === "back" && !expect && sheetsOpen()) {
+      // R30: Back with a sheet open closes that sheet and the screen stays. The return to the
+      // entry we just left arrives as a navigation to the route already on screen (a no-op).
+      closeTopSheet();
+      history.forward();
+      return;
+    }
+    // A stale origin (the entry behind was replaced since): still land on the parent.
+    if (expect && hash !== expect) return void this.replace(expect);
+    this.go();
+  }
+
+  /** Replaces the entry on screen and keeps its place in history (index and origin). */
+  replace(hash) {
+    history.replaceState(history.state, "", hash);
+    this.hash = hashNow();
+    return this.go();
+  }
+
+  /** R29: an in-app Back link is "up" and never makes history longer. */
+  up(parent) {
+    const { i, from, from2 } = this.entry;
+    if (i > 0 && from === parent) {
+      this.expect = parent;
+      history.back();
+    } else if (i > 1 && from2 === parent && from?.startsWith(`${parent}/`)) {
+      // Print was opened from the Export overlay of this Editor: step over the overlay too,
+      // so a system Back after "לציור" reopens neither Print nor the overlay.
+      this.expect = parent;
+      history.go(-2);
+    } else {
+      this.replace(parent);
+    }
+  }
+
+  onBackClick(e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const parent = e.target.closest?.("a.back")?.getAttribute("href");
+    if (!parent?.startsWith("#")) return;
+    e.preventDefault();
+    this.up(parent);
+  }
+
   /** Leaves the export overlay: back in history when it was opened in-app, else replace. */
   closeOverlay(hash) {
-    if (this.overlayFromEditor) {
-      this.overlayFromEditor = false;
+    if (this.entry.i > 0 && this.entry.from === hash) {
+      this.expect = hash;
       history.back();
     } else {
-      location.replace(hash);
+      this.replace(hash);
     }
   }
 
@@ -96,24 +168,37 @@ class Router {
   }
 
   async navigate() {
+    const route = parseRoute(location.hash);
+    if (route.redirect) return void this.replace(route.redirect);
+    if (route.name === "new") return this.createNew();
+    const cur = this.current;
+    if (cur && cur.name === route.name && sameParams(cur.params, route.params)) {
+      // Already on screen (a Back that only closed a sheet, a #/new that could not start):
+      // nothing to rebuild, and the sheets under the closed one stay.
+      this.runAfterNavigate();
+      return;
+    }
     // Sheets belong to the screen that opened them: close them (as cancel) before any
     // route change, so none survives onto another screen (Critic F1).
     closeAllSheets();
-    const route = parseRoute(location.hash);
-    if (route.redirect) return location.replace(route.redirect);
-    if (route.name === "new") return this.createNew();
-    const cur = this.current;
     if (cur && cur.name === "editor" && route.name === "editor" && cur.params.id === route.params.id) {
-      this.overlayFromEditor = route.params.overlay === "export" && !cur.params.overlay;
       cur.params = route.params;
       await cur.screen.update(route.params);
       return;
     }
-    const swap = async () => {
-      if (cur) {
+    if (cur) {
+      // The outgoing screen saves BEFORE the view transition starts: a transition pauses
+      // rendering, and canvas.toBlob then waits about a second per frame (PERF-P-01).
+      // Inert, so no input reaches a screen that is already on its way out.
+      cur.section.inert = true;
+      try {
         await cur.screen.unmount();
-        cur.section.remove();
+      } catch (err) {
+        console.error("Screen could not close cleanly", err);
       }
+    }
+    const swap = async () => {
+      cur?.section.remove();
       const section = h("section", { class: `screen screen--${route.name}`, "data-screen": route.name });
       this.main.append(section);
       const screen = new SCREENS[route.name](section, this);
@@ -125,9 +210,7 @@ class Router {
       if (resume?.y) restoreScroll(resume.y);
       this.arrived = true;
       if (route.name !== "editor") section.querySelector("h1")?.focus({ preventScroll: true });
-      const after = this.afterNavigate;
-      this.afterNavigate = null;
-      after?.();
+      this.runAfterNavigate();
     };
     if (document.startViewTransition && !reducedMotion() && cur && document.visibilityState === "visible") {
       const vt = document.startViewTransition(swap);
@@ -139,14 +222,34 @@ class Router {
     }
   }
 
+  runAfterNavigate() {
+    const after = this.afterNavigate;
+    this.afterNavigate = null;
+    after?.();
+  }
+
+  /** `#/new` is never a screen: its history entry becomes the new project's Editor. */
   async createNew() {
-    if (await isFull()) {
-      this.afterNavigate = () => showW2b(); // shown on the Gallery, after its route change
-      location.replace("#/gallery");
-      return;
+    try {
+      if (await isFull()) {
+        this.afterNavigate = () => showW2b(); // shown on the Gallery, after its route change
+        this.replace("#/gallery");
+        return;
+      }
+      const project = await createProject({});
+      this.replace(`#/editor/${project.id}`);
+    } catch (err) {
+      // R31: never stay on #/new, or the next tap on "אנימציה חדשה" changes nothing.
+      console.error("Could not start a new animation", err);
+      if (!err?.storage) toast(t("common.error.generic")); // storage errors have their own message (K1)
+      const { i, from } = this.entry;
+      if (i > 0 && from && from !== "#/new") {
+        this.expect = from;
+        history.back();
+      } else {
+        this.replace("#/");
+      }
     }
-    const project = await createProject({});
-    location.replace(`#/editor/${project.id}`);
   }
 }
 

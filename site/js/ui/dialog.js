@@ -10,6 +10,11 @@ import { iconEl } from "./icons.js";
 // The export overlay is route-bound and manages itself, so it is not registered here.
 const openSheets = new Set();
 
+// Where each sheet hands focus back to. A dialog opened from inside a sheet (Rename and Delete
+// from a card menu) inherits that sheet's target: the menu item it was opened from is gone by
+// the time the dialog closes (A8).
+const returnTargets = new WeakMap();
+
 /** Closes every open sheet at once (no exit animation). Returns how many were open. */
 export function closeAllSheets() {
   const all = [...openSheets];
@@ -17,12 +22,27 @@ export function closeAllSheets() {
   return all.length;
 }
 
+/** How many registered sheets are open. The router asks before it acts on a history Back (R30). */
+export function sheetsOpen() {
+  return openSheets.size;
+}
+
+/** Closes the sheet opened last, as a cancel. Returns false when none is open. */
+export function closeTopSheet() {
+  const top = [...openSheets].pop();
+  top?.close();
+  return !!top;
+}
+
 /**
  * openSheet({ title, body: Node, anchor?, side?, onClose?, kind: "sheet" | "dialog", className, owner? })
- * side (desktop only): an element to open beside, on its inline-start side (the canvas side of
- * the RTL side panel), top-aligned with the anchor. Used by the shade chart popover.
+ * side (desktop only): an element to open beside, on the side of it that faces the canvas (the
+ * middle of the window), top-aligned with `side`. Used by the shade chart popover (beside the
+ * side panel) and the pencil-width popover (beside the tool rail), so neither covers its origin.
  * owner: the screen that opened it; once owner.disposed is set, every input in the sheet
  * is swallowed and the sheet closes, so a stale sheet can never write data.
+ * Opening moves focus to the title (or to the dialog's own text field), never to the close
+ * button: a screen reader starts at the title, and WebKit shows no ring after a tap (WK-W1).
  * Returns { close, dialog }.
  */
 export function openSheet({ title, body, anchor = null, side = null, onClose, kind = "sheet", className = "", labelledTitle = true, owner = null }) {
@@ -31,15 +51,20 @@ export function openSheet({ title, body, anchor = null, side = null, onClose, ki
   const dialog = h("dialog", {
     class: `sheet sheet--${popover ? "popover" : kind} ${className}`,
     "aria-labelledby": labelledTitle && title ? titleId : null,
+    tabindex: title ? null : "-1",
   });
+  const titleEl = title ? h("h2", { class: "sheet__title", id: titleId, tabindex: "-1" }, title) : null;
   const header = h("div", { class: "sheet__header" },
     kind === "sheet" && !popover ? h("span", { class: "sheet__handle", "aria-hidden": "true" }) : null,
-    title ? h("h2", { class: "sheet__title", id: titleId }, title) : null,
+    titleEl,
     h("button", { class: "icon-btn sheet__close", type: "button", "aria-label": t("common.close"), onclick: () => close() }, iconEl("close")),
   );
   dialog.append(header, h("div", { class: "sheet__body" }, body));
   // A side popover always hands focus back to its toggle (a mouse click may not focus it).
-  const returnFocus = side && anchor ? anchor : document.activeElement;
+  const active = document.activeElement;
+  const parentSheet = active?.closest?.("dialog.sheet");
+  const returnFocus = side && anchor ? anchor : (parentSheet && returnTargets.get(parentSheet)) || active;
+  returnTargets.set(dialog, returnFocus);
   let closed = false;
   const entry = { close, owner };
   function close(result, { immediate = false } = {}) {
@@ -50,6 +75,8 @@ export function openSheet({ title, body, anchor = null, side = null, onClose, ki
       if (dialog.open) dialog.close();
       dialog.remove();
       if (returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
+      // The opener was rebuilt meanwhile (a renamed card): the screen heading, not <body>.
+      else if (document.activeElement === document.body) document.querySelector(".screen h1[tabindex]")?.focus({ preventScroll: true });
       onClose?.(result);
     };
     if (immediate) return finish();
@@ -73,8 +100,9 @@ export function openSheet({ title, body, anchor = null, side = null, onClose, ki
   });
   document.body.append(dialog);
   dialog.showModal();
+  (dialog.querySelector(".sheet__body input[type='text']") || titleEl || dialog).focus({ preventScroll: true });
   openSheets.add(entry);
-  if (popover && side) placeBeside(dialog, anchor, side);
+  if (popover && side) placeBeside(dialog, side);
   else if (popover) placePopover(dialog, anchor);
   return { close, dialog };
 }
@@ -92,16 +120,17 @@ function placePopover(dialog, anchor) {
   Object.assign(dialog.style, { position: "fixed", margin: "0", top: `${top}px`, left: `${left}px`, right: "auto", bottom: "auto" });
 }
 
-/** Beside `side`: right of it under RTL, left of it under LTR; top follows the anchor, clamped. */
-function placeBeside(dialog, anchor, side) {
+/** Beside `side`, on the side of it that faces the middle of the window (the canvas), with
+ *  both tops level, clamped to the window. The entry slide comes from `side` (data-from). */
+function placeBeside(dialog, side) {
   const p = side.getBoundingClientRect();
-  const a = anchor.getBoundingClientRect();
   const d = dialog.getBoundingClientRect();
   const margin = 8;
-  const rtl = getComputedStyle(side).direction === "rtl";
-  let left = rtl ? p.right + margin : p.left - margin - d.width;
+  const sideIsLeft = p.left + p.width / 2 < innerWidth / 2;
+  let left = sideIsLeft ? p.right + margin : p.left - margin - d.width;
   left = Math.max(margin, Math.min(left, innerWidth - d.width - margin));
-  const top = Math.max(margin, Math.min(a.top - 16, innerHeight - d.height - margin));
+  const top = Math.max(margin, Math.min(p.top, innerHeight - d.height - margin));
+  dialog.dataset.from = sideIsLeft ? "left" : "right";
   Object.assign(dialog.style, { position: "fixed", margin: "0", top: `${top}px`, left: `${left}px`, right: "auto", bottom: "auto" });
 }
 
