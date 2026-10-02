@@ -255,11 +255,24 @@
   .strip { position: relative; height: var(--strip-h); background: var(--film); user-select: none; -webkit-user-select: none; }
   .strip__scroller { height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scrollbar-width: none; overscroll-behavior-x: contain; }
   .strip__scroller::-webkit-scrollbar { display: none; }
+  /* While a frame is being dragged the strip must not snap: a snapped cell that moves would pull the strip along with it. */
+  .strip.is-dragging .strip__scroller { overflow-x: hidden; scroll-snap-type: none; }
   .strip__track { display: flex; align-items: stretch; height: 100%; width: max-content; background: var(--holes) repeat-x 0 0 / var(--hole-pitch) var(--hole-h), var(--holes) repeat-x 0 100% / var(--hole-pitch) var(--hole-h); will-change: transform; }
   .strip__lead { flex: 0 0 auto; }
   .cell { position: relative; flex: 0 0 var(--cell-w); width: var(--cell-w); height: 100%; scroll-snap-align: center; touch-action: pan-x; border-inline: 0; }
-  .cell__thumb { position: absolute; top: 12px; left: 4px; width: var(--thumb-w); height: var(--thumb-h); background: var(--paper); border-radius: 1px; }
-  .cell.is-current .cell__thumb { outline: 2px solid var(--lamp); outline-offset: 1px; box-shadow: 0 0 0 7px rgba(244, 182, 63, .35); }
+  /* Keyboard focus: an inset ring around the whole cell, so the 72px scroller cannot clip it,
+     in On-film, so it never reads as the Lamp "current" outline around the thumbnail. */
+  .cell:focus-visible { outline: 3px solid transparent; outline-offset: -3px; } /* transparent: forced-colours mode still paints it */
+  .cell:focus-visible::before { content: ""; position: absolute; inset: 0; z-index: 3; border: 3px solid var(--on-film); pointer-events: none; }
+  .cell__thumb { position: absolute; top: 12px; left: 4px; width: var(--thumb-w); height: var(--thumb-h); background: var(--paper); border-radius: 1px; transition: transform var(--t-press); }
+  @media (hover: hover) {
+    .cell:not(.cell--add, .is-current):hover .cell__thumb { outline: 1px solid var(--on-film-muted); outline-offset: 1px; }
+    .cell.is-current:hover .cell__thumb { outline-color: var(--lamp-hover); }
+  }
+  .cell:not(.cell--add):active .cell__thumb { transform: scale(.96); }
+  /* Current frame: 2px Lamp outline and a soft Lamp glow. The clip keeps both within 4px of
+     the thumbnail: inside the cell, clear of the neighbours and of the sprocket holes. */
+  .cell.is-current .cell__thumb { outline: 2px solid var(--lamp); outline-offset: 0; box-shadow: 0 0 3px 2px rgba(244, 182, 63, .7); clip-path: inset(-4px); }
   /* The thumbnail is a canvas, which paints over its own inset shadow, so the dashed
      lesson-blank border sits on an overlay above it. */
   .cell--blank::after { content: ""; position: absolute; top: 12px; left: 4px; width: var(--thumb-w); height: var(--thumb-h); box-sizing: border-box; border: 1.5px dashed var(--disabled); border-radius: 1px; pointer-events: none; }
@@ -270,13 +283,18 @@
   .cell__lock { position: absolute; top: 14px; left: 6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--glow); }
   .cell--add { display: grid; place-items: center; }
   .cell--add[hidden] { display: none; }
-  .cell__plus { width: 56px; height: 44px; display: grid; place-items: center; border: 1.5px dashed var(--on-film); border-radius: 6px; color: var(--on-film); }
-  .cell--add:disabled .cell__plus { border-color: var(--on-film-muted); color: var(--on-film-muted); opacity: .6; }
-  .cell--add:not(:disabled):hover .cell__plus { background: rgba(241, 235, 221, .08); }
-  .strip__counter { align-self: center; display: flex; flex-direction: column; gap: 2px; padding: 0 var(--s-8); color: var(--on-film-muted); font-size: var(--fs-caption); white-space: nowrap; background: var(--film); }
-  .strip__counter--warn .num { color: var(--on-film); }
-  .strip__counter[hidden] { display: none; }
-  .strip__w4 { padding: 1px 8px; border-radius: var(--r-pill); background: var(--warn-bg); color: var(--warn-text); font-weight: 500; }
+  .cell__plus { width: 56px; height: 44px; display: grid; place-items: center; border: 1.5px dashed var(--on-film); border-radius: var(--r-canvas); color: var(--on-film); transition: transform var(--t-press); }
+  .cell--add[aria-disabled="true"] { cursor: not-allowed; }
+  .cell--add[aria-disabled="true"] .cell__plus { border-color: var(--on-film-muted); color: var(--on-film-muted); opacity: .6; }
+  .cell--add:not([aria-disabled="true"]):hover .cell__plus { background: rgba(241, 235, 221, .08); }
+  .cell--add:not([aria-disabled="true"]):active .cell__plus { transform: scale(.96); }
+  /* Frame counter and the 100 / 119 / 120 notice: pinned in the top edge band (the 12px above
+     the thumbnails), outside the scrolling track, so they read at any scroll position and
+     cover no thumbnail. The box is right-to-left: the count comes first, then the notice. */
+  .strip__counter { position: absolute; top: 0; right: 0; z-index: 2; display: flex; align-items: center; gap: 6px; height: 12px; padding-inline: 6px; border-end-end-radius: var(--r-canvas); background: var(--film); color: var(--edge-print); font-size: 11px; font-weight: 500; line-height: 12px; white-space: nowrap; pointer-events: none; transition: opacity 160ms var(--ease-exit); }
+  .strip__counter--warn .strip__count { color: var(--on-film); }
+  .strip__counter[hidden], .strip__w4[hidden] { display: none; }
+  .strip__w4 { padding: 0 6px; border-radius: var(--r-pill); background: var(--warn-bg); color: var(--warn-text); font-weight: 700; }
   .cell.is-new { animation: cell-grow 200ms var(--ease-enter); }
   @keyframes cell-grow { from { flex-basis: 0; width: 0; opacity: 0; } }
   .cell.is-lifted { z-index: 3; transform: scale(1.05); box-shadow: var(--shadow-lift); background: var(--film); }
@@ -284,7 +302,7 @@
   @keyframes lamp-pulse { 50% { box-shadow: 0 0 0 5px var(--lamp); } }
   .strip__insert { position: absolute; top: 6px; bottom: 6px; left: 0; width: 2px; background: var(--lamp); pointer-events: none; }
   .strip__insert[hidden] { display: none; }
-  .strip__gate { position: absolute; left: 50%; top: 8px; width: 76px; height: 56px; margin-left: -38px; border: 3px solid var(--lamp); border-radius: 6px; pointer-events: none;
+  .strip__gate { position: absolute; left: 50%; top: 8px; width: 76px; height: 56px; margin-left: -38px; border: 3px solid var(--lamp); border-radius: var(--r-canvas); pointer-events: none;
     opacity: 0; transform: scale(1.15); transition: opacity 160ms var(--ease-exit), transform 0s linear 160ms; }
   .strip__gate-label { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 0 6px; border-radius: var(--r-pill); background: var(--lamp); color: var(--ink); font: 700 11px/15px var(--font-ui); white-space: nowrap; }
   .strip__dim { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 160ms var(--ease-exit);
@@ -294,29 +312,43 @@
   .playbar { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: calc(var(--playbar) + var(--safe-b)); padding: 0 var(--s-8) var(--safe-b); background: var(--film); color: var(--on-film); flex: 0 0 auto; border-top: 1px solid #2E2A25; }
   .film__btn { color: var(--on-film); min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: var(--r-control); }
   .film__btn:hover { background: rgba(241, 235, 221, .08); }
+  .film__btn[aria-disabled="true"] { color: var(--on-film-muted); opacity: .45; background: none; cursor: default; transform: none; }
+  .mode-btn { transition: background-color 150ms, transform var(--t-press); }
+  .mode-btn:active { background: rgba(241, 235, 221, .16); transform: scale(.96); }
   .play-wrap { display: flex; align-items: center; gap: var(--s-8); }
-  .play-btn { width: 56px; height: 48px; border-radius: var(--r-pill); background: var(--lamp); color: var(--ink); box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px rgba(241,235,221,.25); display: grid; place-items: center; transition: background-color 150ms; }
+  /* A true circle on every size: a 56px circle cannot sit inside the 56px bar (fix round R26). */
+  .play-btn { width: 48px; height: 48px; border-radius: var(--r-pill); background: var(--lamp); color: var(--ink); box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px rgba(241,235,221,.25); display: grid; place-items: center; transition: background-color 150ms; }
   .play-btn:hover { background: var(--lamp-hover); }
   .play-btn[aria-disabled="true"] { background: #3B362F; color: var(--on-film-muted); cursor: not-allowed; }
   .play-btn.is-pressed { animation: press 100ms var(--ease-enter); }
   @keyframes press { 50% { transform: scale(.94); } }
   .play-label { display: none; font-weight: 500; font-size: .9375rem; }
   .fps { display: flex; border-radius: var(--r-control); overflow: hidden; border: 1px solid #3B362F; }
-  .fps-btn { width: 44px; height: 44px; color: var(--on-film); font-weight: 500; }
+  .fps-btn { width: 44px; height: 44px; color: var(--on-film); font-weight: 500; transition: background-color 150ms, transform var(--t-press); }
   .fps-btn[aria-pressed="true"] { background: var(--lamp); color: var(--ink); }
+  @media (hover: hover) {
+    .fps-btn:hover { background: rgba(241, 235, 221, .08); }
+    .fps-btn[aria-pressed="true"]:hover { background: var(--lamp-hover); }
+  }
+  .fps-btn:active { background: rgba(241, 235, 221, .16); transform: scale(.94); }
+  .fps-btn[aria-pressed="true"]:active { background: var(--lamp-hover); }
   .mode-btn__label { display: none; font-size: .875rem; }
 
   /* ---- playing state (choreography, Part B) ---- */
   .is-playing .stage__onion { opacity: 0; transition: opacity 180ms var(--ease-exit); }
   .is-playing .tools, .is-playing .topbar__title, .is-playing .topbar .btn, .is-playing .save-status, .is-playing .goal-strip, .is-playing .panel { opacity: .4; pointer-events: none; transition: opacity 160ms var(--ease-exit); }
-  .is-playing .stage { box-shadow: 0 0 0 8px rgba(244, 182, 63, .18); transition: box-shadow var(--t-focal) var(--ease-enter) 60ms; }
-  .is-playing.glow-dip .stage { box-shadow: 0 0 0 8px rgba(244, 182, 63, .1656); transition: none; }
+  /* The lamp: the cream halo stays and an amber glow comes up around it (fix round R27). */
+  .is-playing .stage { box-shadow: 0 0 0 8px rgba(255, 252, 244, .7), 0 0 28px 10px rgba(244, 182, 63, .45); transition: box-shadow var(--t-focal) var(--ease-enter) 60ms; }
+  /* First Play: the lamp catches. The amber drops to .28 for 40ms, twice, as clean steps. */
+  .is-playing.glow-catch .stage { transition: none; }
+  .is-playing.glow-dip .stage { box-shadow: 0 0 0 8px rgba(255, 252, 244, .7), 0 0 28px 10px rgba(244, 182, 63, .28); }
   .is-playing .stage__display { cursor: pointer; }
   .strip.is-playing .strip__scroller { overflow-x: hidden; scroll-snap-type: none; }
+  .strip.is-playing .strip__counter { opacity: 0; } /* the gate label counts frames during Play */
   .strip.is-playing .strip__gate { opacity: 1; transform: scale(1); transition: opacity var(--t-focal) var(--ease-emph) 120ms, transform var(--t-focal) var(--ease-emph) 120ms; }
   .strip.is-playing .strip__dim { opacity: 1; transition: opacity var(--t-focal) var(--ease-emph) 120ms; }
   .strip.is-playing .cell.is-current .cell__thumb { outline-color: transparent; box-shadow: none; }
-  .strip.is-playing .cell.is-showing .cell__thumb { outline: 2px solid var(--lamp); outline-offset: 1px; box-shadow: 0 0 0 7px rgba(244, 182, 63, .35); }
+  .strip.is-playing .cell.is-showing .cell__thumb { outline: 2px solid var(--lamp); outline-offset: 0; box-shadow: 0 0 3px 2px rgba(244, 182, 63, .7); clip-path: inset(-4px); }
   .is-exporting .editor__body, .is-exporting .frames, .is-exporting .playbar { pointer-events: none; }
 
   /* ---- desktop editor ---- */
@@ -505,23 +537,28 @@
 
   /* ---- toasts ---- */
   .toasts { position: fixed; z-index: 50; left: calc(var(--s-16) + var(--safe-l)); right: calc(var(--s-16) + var(--safe-r)); bottom: calc(var(--s-16) + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: var(--s-8); pointer-events: none; }
-  /* Above the film strip, not just the playback bar, so a toast never hides the strip. */
+  /* Above the film strip, not just the playback bar, so a toast never hides the strip. On a
+     phone the tool row lies under the toast as well: js/ui/toast.js measures the rows that
+     are really there and sets the offset, 8px above the highest of them (fix round R23). */
   body:has(.editor) .toasts { bottom: calc(var(--playbar) + var(--strip-h) + var(--safe-b) + 8px); }
-  .toast { position: relative; overflow: hidden; pointer-events: auto; display: flex; align-items: center; gap: var(--s-8); max-width: 420px; width: 100%; padding-block: 10px; padding-inline: var(--s-16) var(--s-8); border-radius: var(--r-control); background: var(--film); color: var(--on-film); font-size: 15px; line-height: 1.4; box-shadow: var(--shadow-lift); animation: fade-in 200ms var(--ease-enter); }
+  .toast { position: relative; overflow: hidden; pointer-events: auto; display: flex; align-items: center; gap: var(--s-8); max-width: 420px; width: 100%; padding-block: 10px; padding-inline: var(--s-16) var(--s-8); border-radius: var(--r-control); background: var(--film); color: var(--on-film); font-size: .9375rem; font-weight: 400; line-height: 1.4; text-align: start; box-shadow: var(--shadow-lift); animation: fade-in 200ms var(--ease-enter); }
+  .toast--shown { animation: none; } /* a toast that moves into or out of a dialog must not fade in again */
   .toast--out { animation: fade-out 200ms var(--ease-exit) forwards; }
   .toast__text { flex: 1; display: flex; flex-direction: column; }
   .toast__line { color: var(--on-film-muted); font-size: .875rem; }
   .toast__icon { color: var(--warn-bg); flex: 0 0 auto; }
-  .toast--warn .toast__icon { background: var(--warn-bg); color: var(--warn-text); border-radius: 6px; padding: 2px; }
-  .toast__action { min-height: 44px; min-width: 44px; padding: 0 var(--s-8); color: var(--lamp); font-weight: 700; white-space: nowrap; }
+  .toast--warn .toast__icon { background: var(--warn-bg); color: var(--warn-text); border-radius: var(--r-canvas); padding: 2px; }
+  .toast__action { min-height: 44px; min-width: 44px; padding: 0 var(--s-8); border-radius: var(--r-control); color: var(--lamp); font-weight: 700; white-space: nowrap; }
+  /* Film surfaces need the Lamp ring: the Ink ring is 1.04:1 on Film. */
+  .toast :focus-visible, .coach :focus-visible { outline-color: var(--lamp); }
   .toast__timer { position: absolute; bottom: 0; inset-inline: 0; height: 2px; background: var(--lamp); transform-origin: right; animation: timer linear forwards; }
+  .toast--paused .toast__timer { animation-play-state: paused; }
   @keyframes timer { to { transform: scaleX(0); } }
 
   /* ---- coach marks ---- */
-  .coach { position: fixed; z-index: 40; max-width: 240px; display: flex; align-items: center; gap: 2px; padding-block: 4px; padding-inline: 12px 4px; border-radius: var(--r-control); background: var(--film); color: var(--on-film); font: 500 15px/1.3 var(--font-ui); box-shadow: var(--shadow-lift); pointer-events: none; animation: fade-in 200ms var(--ease-enter); }
+  .coach { position: fixed; z-index: 40; max-width: min(15rem, calc(100vw - 16px)); display: flex; align-items: center; gap: 2px; padding-block: 4px; padding-inline: 12px 4px; border-radius: var(--r-control); background: var(--film); color: var(--on-film); font: 500 .9375rem/1.3 var(--font-ui); box-shadow: var(--shadow-lift); pointer-events: none; animation: fade-in 200ms var(--ease-enter); transition: top 160ms var(--ease-enter); }
   .coach__text { padding: 8px 0; }
-  .coach__close { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; color: var(--on-film); border-radius: 10px; flex: 0 0 auto; }
-  .coach::after { content: ""; position: absolute; left: var(--arrow-x, 50%); width: 12px; height: 12px; margin-left: -6px; background: var(--film); transform: rotate(45deg); }
+  .coach__close { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; color: var(--on-film); border-radius: var(--r-control); flex: 0 0 auto; }  .coach::after { content: ""; position: absolute; left: var(--arrow-x, 50%); width: 12px; height: 12px; margin-left: -6px; background: var(--film); transform: rotate(45deg); }
   .coach--above::after { bottom: calc(-5px - var(--lead, 0px)); }
   /* When clearOf lifts the bubble away from its target, a 2px leader runs down to the arrow tip */
   .coach--above::before { content: ""; position: absolute; top: 100%; left: var(--arrow-x, 50%); width: 2px; height: var(--lead, 0px); margin-left: -1px; background: var(--film); }
@@ -531,7 +568,10 @@
   .coach--out { animation: fade-out 200ms var(--ease-exit) forwards; }
   .coach--first-play { padding-block: 8px; padding-inline: 14px; }
   .coach-rings { position: fixed; z-index: 39; pointer-events: none; transform: translate(-50%, -50%); }
-  .coach-rings span { position: absolute; inset: -6px; border: 2px solid var(--lamp); border-radius: 14px; animation: ring 1200ms var(--ease-enter) 3 forwards; opacity: 0; }
+  /* Lamp on Desk is 1.25:1: a Film edge on both sides makes the rings visible there. */
+  .coach-rings span { position: absolute; inset: -6px; border: 2px solid var(--lamp); border-radius: var(--r-card); box-shadow: 0 0 0 1px var(--film), inset 0 0 0 1px var(--film); animation: ring 1200ms var(--ease-enter) 3 forwards; opacity: 0; }
+  /* While a lifted tip is open its leader runs down across the tool row: the tool keys paint above it. */
+  body:has(.coach--lead) .tool-key { position: relative; z-index: 41; }
   .coach-rings span + span { animation-delay: 300ms; }
   @keyframes ring { 0% { opacity: .9; transform: scale(.9); } 100% { opacity: 0; transform: scale(1.25); } }
 

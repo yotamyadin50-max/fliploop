@@ -12,6 +12,8 @@ import { Doc, frameHasInk } from "./doc.js";
 import { Stage } from "./stage.js";
 import { FilmStrip } from "./strip.js";
 import { Player } from "./playback.js";
+import { syncGhost, restoreIndex } from "../core/frame-order.js";
+import { MAX_FRAMES } from "../store/projects.js";
 import { UndoManager } from "./undo.js";
 import { DrawingInput, WIDTHS } from "./drawing.js";
 import { LessonMode } from "./lesson-mode.js";
@@ -276,13 +278,14 @@ export class EditorScreen {
       doc: () => this.doc,
       current: () => this.cur,
       select: (i) => this.select(i),
+      stop: () => this.player.stop(),
       openMenu: (i, el) => this.openFrameMenu(i, el),
       add: () => this.addFrame(),
       reorder: (a, b) => this.reorder(a, b),
       canReorder: () => !this.doc.isLesson,
       isPlaying: () => this.player?.playing,
       frameState: (i) => ({ done: this.lessonMode ? this.lessonMode.done.get(i) : true }),
-      hint: (text) => toast(text),
+      hint: (text) => toast(text, { owner: this }),
     });
     this.player = new Player({
       doc,
@@ -448,8 +451,8 @@ export class EditorScreen {
     const doc = this.doc;
     this.playBtn = h("button", { class: "play-btn", type: "button", onclick: () => this.togglePlay() });
     this.playLabel = h("span", { class: "play-label", dir: "rtl" });
-    const prev = h("button", { class: "icon-btn film__btn", type: "button", "aria-label": t("play.prev"), title: t("play.prev.tooltip"), onclick: () => this.step(-1) }, iconEl("stepPrev"));
-    const next = h("button", { class: "icon-btn film__btn", type: "button", "aria-label": t("play.next"), title: t("play.next.tooltip"), onclick: () => this.step(1) }, iconEl("stepNext"));
+    const prev = this.prevBtn = h("button", { class: "icon-btn film__btn", type: "button", "aria-label": t("play.prev"), title: t("play.prev.tooltip"), onclick: () => this.step(-1) }, iconEl("stepPrev"));
+    const next = this.nextBtn = h("button", { class: "icon-btn film__btn", type: "button", "aria-label": t("play.next"), title: t("play.next.tooltip"), onclick: () => this.step(1) }, iconEl("stepNext"));
     this.fpsBtns = [6, 12, 24].map((fps) => h("button", {
       class: "fps-btn num", type: "button", "aria-pressed": String(doc.project.fps === fps), "aria-label": t("play.fps.option.aria", { fps }),
       onclick: () => this.setFps(fps),
@@ -471,6 +474,10 @@ export class EditorScreen {
     this.playBtn.title = single ? t("play.play.disabled") : t(playing ? "play.stop" : "play.play");
     this.playBtn.setAttribute("aria-disabled", String(single && !playing));
     this.playLabel.textContent = t(playing ? "play.stop" : "play.play");
+    // At either end one step button has nowhere to go. aria-disabled, so a focused button
+    // keeps focus while stepping. During Play both stay live: a step also stops playback.
+    this.prevBtn.setAttribute("aria-disabled", String(!playing && this.cur <= 0));
+    this.nextBtn.setAttribute("aria-disabled", String(!playing && this.cur >= this.doc.count - 1));
     const mode = this.doc.project.playMode;
     const modeText = t(mode === "pingpong" ? "play.mode.pingpong" : "play.mode.loop");
     this.modeBtn.replaceChildren(iconEl(mode === "pingpong" ? "pingpong" : "loop"), h("span", { class: "mode-btn__label", dir: "rtl" }, modeText));
@@ -523,6 +530,7 @@ export class EditorScreen {
     this.lessonMode?.onFrameChange();
     this.refreshUndoButtons();
     this.refreshPlaybar();
+    this.advanceCoach("select");
   }
 
   step(d) {
@@ -533,13 +541,13 @@ export class EditorScreen {
 
   async addFrame() {
     if (this.player.playing) this.player.stop();
-    if (!this.doc.canAdd()) return;
-    if (await isFull()) return showW2b(this.doc);
+    if (!(await this.roomForFrame())) return;
     this.insertAt(this.cur, null);
   }
 
   insertAt(index, copyFrom) {
     const f = this.doc.insertFrame(index, copyFrom);
+    this.rememberOrder();
     this.strip.render();
     const cell = this.strip.cells[index + 1];
     cell?.classList.add("is-new");
@@ -547,41 +555,54 @@ export class EditorScreen {
     this.autosaver.frameOp();
     announce(t("toast.frameAdded.aria", { n: index + 2 }));
     this.checkLowMemory();
-    this.advanceCoach("added");
     return f;
   }
 
+  /** Duplicates frame i. During Play it stops first and copies the frame it stopped on. */
   async duplicateFrame(i) {
-    if (!this.doc.canAdd()) return;
-    if (await isFull()) return showW2b(this.doc);
+    if (this.player.playing) {
+      this.player.stop();
+      i = this.cur;
+    }
+    if (!(await this.roomForFrame())) return;
     this.insertAt(i, this.doc.frames[i]);
-    toast(t("toast.frameDuplicated", { n: i + 1 }));
+    toast(t("toast.frameDuplicated", { n: i + 1 }), { owner: this });
   }
 
   async insertBlank(i) {
-    if (!this.doc.canAdd()) return;
-    if (await isFull()) return showW2b(this.doc);
+    if (this.player.playing) {
+      this.player.stop();
+      i = this.cur;
+    }
+    if (!(await this.roomForFrame())) return;
     this.insertAt(i, null);
   }
 
   deleteFrame(i) {
     if (this.doc.count <= 1 || this.doc.isLesson) return;
+    if (this.player.playing) this.player.stop();
+    this.rememberOrder();
     const frame = this.doc.removeFrame(i);
+    const rec = { frame, restored: false, toastClosed: false, toast: null };
+    // K4: Ctrl+Z brings the last deleted frame back for as long as no newer step exists.
+    rec.restore = () => Promise.resolve(this.restoreFrame(rec, { viaUndo: true }));
+    this.trash.set(frame.id, rec);
+    this.frameRestore = rec.restore;
     this.strip.render();
     this.select(Math.min(i, this.doc.count - 1));
     this.autosaver.frameOp();
-    let restored = false;
-    toast(t("toast.frameDeleted", { n: i + 1 }), {
+    rec.toast = toast(t("toast.frameDeleted", { n: i + 1 }), {
       timerMs: 5000,
-      action: { label: t("common.undo"), onClick: () => {
-        restored = true;
-        this.doc.restoreFrame(frame, i);
-        this.strip.render();
-        this.select(i);
-        this.autosaver.frameOp();
-      } },
+      owner: this,
+      announce: t("toast.frameDeleted.aria", { n: i + 1 }),
+      returnFocus: () => this.strip.cells[this.cur],
+      action: { label: t("common.undo"), onClick: () => this.restoreFrame(rec) },
+      onClose: () => {
+        rec.toastClosed = true;
+        this.emptyTrash();
+      },
     });
-    setTimeout(() => { if (!restored) this.undo.dropFrame(frame.id); }, 5500);
+    this.emptyTrash();
   }
 
   setHold(i, hold) {
@@ -596,10 +617,72 @@ export class EditorScreen {
   reorder(from, to) {
     const currentId = this.frame.id;
     this.doc.moveFrame(from, to);
+    this.rememberOrder();
     this.strip.render();
     this.select(this.doc.indexOf(currentId), { instantScroll: true });
     announce(t("strip.reorder.done.aria", { from: from + 1, to: to + 1 }));
     this.autosaver.frameOp();
+  }
+
+  /** True when one more frame fits. At 120 frames it says why not (R25); a full disk opens W2b. */
+  async roomForFrame() {
+    if (!this.doc.canAdd()) {
+      if (!this.doc.isLesson) toast(t("w4.add.disabled"), { id: "w4-max", owner: this });
+      return false;
+    }
+    if (await isFull()) {
+      showW2b(this.doc);
+      return false;
+    }
+    return !this.disposed && this.doc.canAdd(); // a second fast press may have filled the film meanwhile
+  }
+
+  /** Deleted frames that can still come back: frame id to { frame, restore(), toast } (R22). */
+  get trash() {
+    return (this.deletedFrames ??= new Map());
+  }
+
+  /** Keeps the frame order with the restorable deleted frames in their old places (core/frame-order.js). */
+  rememberOrder() {
+    this.ghostOrder = syncGhost(this.ghostOrder || [], this.doc.frames.map((f) => f.id), this.trash);
+  }
+
+  /** Puts a deleted frame back next to the neighbour it had, never at a stored index (R22).
+   *  Returns false when it was refused: the film already holds 120 frames. */
+  restoreFrame(rec, { viaUndo = false } = {}) {
+    if (this.disposed || rec.restored || !this.trash.has(rec.frame.id)) return false;
+    if (this.doc.count >= MAX_FRAMES) {
+      toast(t("toast.frameRestore.full"), { id: "restore-full", owner: this });
+      if (viaUndo && !this.frameRestore) this.frameRestore = rec.restore; // still the last deleted frame
+      return false;
+    }
+    if (this.player.playing) this.player.stop();
+    const index = restoreIndex(this.ghostOrder || [], this.doc.frames.map((f) => f.id), rec.frame.id);
+    rec.restored = true;
+    this.trash.delete(rec.frame.id);
+    if (this.frameRestore === rec.restore) this.frameRestore = null;
+    this.doc.restoreFrame(rec.frame, index);
+    this.rememberOrder();
+    this.strip.render();
+    this.select(index);
+    this.autosaver.frameOp();
+    rec.toast?.close();
+    announce(t("toast.frameRestored.aria", { n: index + 1 }));
+    return true;
+  }
+
+  /** Forgets deleted frames that nothing can bring back: toast closed, and not the Ctrl+Z frame. */
+  emptyTrash() {
+    for (const [id, rec] of this.trash) {
+      if (!rec.toastClosed || this.frameRestore === rec.restore) continue;
+      this.trash.delete(id);
+      this.undo.dropFrame(id);
+    }
+  }
+
+  closeCoach() {
+    this.coach?.close();
+    this.coach = this.coachKey = null;
   }
 
   openFrameMenu(i, anchor) {
@@ -851,7 +934,11 @@ export class EditorScreen {
 
   // ---------- playback ----------
   togglePlay() {
-    if (this.doc.count < 2 && !this.player.playing) return;
+    if (this.doc.count < 2 && !this.player.playing) {
+      // The reason is a hover tooltip only; a tap must hear it too (audit F12).
+      toast(t("play.play.disabled"), { id: "play-disabled", owner: this });
+      return;
+    }
     this.playBtn.classList.remove("is-pressed");
     void this.playBtn.offsetWidth;
     this.playBtn.classList.add("is-pressed");
@@ -882,47 +969,58 @@ export class EditorScreen {
   // ---------- coach marks (free and challenge projects, first session) ----------
   startCoach() {
     if (!this.doc || this.doc.isLesson) return;
+    this.coachOn = true;
     this.advanceCoach("start");
   }
 
+  /**
+   * The tip follows what the child did, not frame 1 (R28). The facts: how many frames have
+   * ink, how many frames there are, and whether the frame on screen is still empty.
+   *   no ink anywhere                    tip 1 at the canvas
+   *   ink, one frame                     tip 2 at "+"
+   *   two or more frames, one with ink   tip 1's text at the canvas while the frame on screen
+   *                                      is empty; on the drawn frame itself, tip 2 at "+"
+   *   two or more frames with ink        tip 3 at Play
+   * A stage that was reached, or closed with X, is never shown again (coach1Seen..coach3Seen).
+   */
   advanceCoach(event) {
-    if (!this.doc || this.doc.isLesson || this.disposed) return;
+    if (!this.coachOn || !this.doc || this.disposed) return;
     const s = getSettings();
-    const show = (target, text, flag, placement = "above") => {
-      this.coach?.close();
-      this.coachFlag = flag;
-      // Coaches 2 and 3 point down from over the canvas: never over the strip or the tool row.
-      const clearOf = target === this.stage.el ? null : () => (isDesktop() ? [this.frames, this.playbar] : [this.tools, this.frames, this.playbar]);
-      this.coach = showCoach(target, text, { placement, clearOf, onClose: (byUser) => { if (byUser) updateSettings({ [flag]: true }); } });
-    };
-    const hasInk = (i) => this.doc.frames[i] && frameHasInk(this.doc.frames[i]);
-    if (!s.coach1Seen) {
-      if (event === "start" && !hasInk(0)) return show(this.stage.el, t("coach.1"), "coach1Seen", "above");
-      if (event === "stroke" && hasInk(0)) {
-        updateSettings({ coach1Seen: true });
-        this.coach?.close();
-        this.coach = null;
-        if (!s.coach2Seen && this.doc.count === 1) show(this.strip.addBtn, t("coach.2"), "coach2Seen");
-      }
-      return;
+    if (s.coach1Seen && s.coach2Seen && s.coach3Seen) return this.closeCoach();
+    if (event === "play") {
+      if (!s.coach3Seen) updateSettings({ coach3Seen: true }); // Play was found: tip 3 has nothing left to say
+      return this.closeCoach();
     }
-    if (!s.coach2Seen) {
-      if ((event === "start" || event === "stroke") && this.doc.count === 1 && hasInk(0)) return show(this.strip.addBtn, t("coach.2"), "coach2Seen");
-      if (event === "added") { this.coach?.close(); }
-      if (event === "stroke" && this.doc.count >= 2 && hasInk(1)) {
-        updateSettings({ coach2Seen: true });
-        if (!s.coach3Seen) show(this.playBtn, t("coach.3"), "coach3Seen");
-      }
-      return;
+    if (this.player.playing) return;
+    let inked = 0;
+    for (const f of this.doc.frames) if (frameHasInk(f) && ++inked === 2) break;
+    const reached = {};
+    let want = null;
+    if (!inked) want = { key: "1", target: this.stage.el, text: t("coach.1"), flag: "coach1Seen" };
+    else {
+      if (!s.coach1Seen) reached.coach1Seen = true;
+      if (inked === 2) {
+        if (!s.coach2Seen) reached.coach2Seen = true;
+        want = { key: "3", target: this.playBtn, text: t("coach.3"), flag: "coach3Seen" };
+      } else if (this.doc.count > 1 && !frameHasInk(this.frame)) want = { key: "1b", target: this.stage.el, text: t("coach.1"), flag: "coach2Seen" };
+      else want = { key: "2", target: this.strip.addBtn, text: t("coach.2"), flag: "coach2Seen" };
     }
-    if (!s.coach3Seen) {
-      if (event === "start" && this.doc.count >= 2 && hasInk(1)) return show(this.playBtn, t("coach.3"), "coach3Seen");
-      if (event === "play") {
-        updateSettings({ coach3Seen: true });
-        this.coach?.close();
-        this.coach = null;
-      }
-    }
+    if (Object.keys(reached).length) updateSettings(reached);
+    if ({ ...s, ...reached }[want.flag]) return this.closeCoach();
+    if (this.coach && this.coachKey === want.key) return;
+    this.closeCoach();
+    const key = want.key;
+    this.coachKey = key;
+    // Tips 2 and 3 point down from over the canvas: never over the strip or the tool row.
+    const clearOf = want.target === this.stage.el ? null : () => (isDesktop() ? [this.frames, this.playbar] : [this.tools, this.frames, this.playbar]);
+    this.coach = showCoach(want.target, want.text, {
+      clearOf,
+      keepBelow: () => this.topbar,
+      onClose: (byUser) => {
+        if (this.coachKey === key) this.coach = this.coachKey = null;
+        if (byUser) updateSettings({ [want.flag]: true });
+      },
+    });
   }
 
   // ---------- saving and warnings ----------

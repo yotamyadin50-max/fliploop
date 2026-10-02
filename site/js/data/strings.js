@@ -521,6 +521,11 @@ export const STRINGS = {
   "tool.eraser.s.aria": "מחק דק, 8 פיקסלים",
   "tool.eraser.m.aria": "מחק בינוני, 20 פיקסלים",
   "tool.eraser.l.aria": "מחק עבה, 40 פיקסלים",
+  "strip.counter.aria.one": "פריים אחד מתוך 120",
+  "strip.counter.aria.other": "{n} פריימים מתוך 120",
+  "toast.frameRestore.full": "אי אפשר להחזיר את הפריים: כבר יש 120 פריימים",
+  "toast.frameDeleted.aria": "פריים {n} נמחק. אפשר להחזיר אותו, גם עם Ctrl+Z",
+  "toast.frameRestored.aria": "פריים {n} חזר למקומו",
   "tool.width.s": "דק",
   "tool.width.m": "בינוני",
   "tool.width.l": "עבה"
