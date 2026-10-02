@@ -15,7 +15,9 @@ import { playSequence, frameDurationMs } from "../core/timing.js";
 import { easing, reducedMotion } from "../lib/util.js";
 import { CELL } from "./strip.js";
 
-const START_DELAY = 360;
+/** Playback itself begins this long after the Play press. Lesson mode times its one full pass
+ *  from the same number (contract K12), so it is exported, not copied. */
+export const PLAY_LEAD_MS = 360;
 const GLIDE_AT = 120;
 const GLIDE_MS = 240;
 
@@ -58,7 +60,7 @@ export class Player {
     this.ed.onStart();
     if (!this.reduced) this.later(GLIDE_AT, () => this.glideTo(current));
     if (this.ed.isFirstPlay()) this.firstPlayFlourish();
-    this.later(START_DELAY, () => {
+    this.later(PLAY_LEAD_MS, () => {
       if (!this.reduced) strip.scroller.scrollLeft = current * CELL;
       this.base = strip.scroller.scrollLeft;
       this.t0 = performance.now();

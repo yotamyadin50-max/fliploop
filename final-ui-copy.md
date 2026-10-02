@@ -115,7 +115,6 @@
 | `home.cta.new.aria` | אנימציה חדשה: פותח דף ציור ריק | |
 | `home.cta.lessons` | שיעורים | Secondary card, line 1 |
 | `home.cta.lessons.progress` | {done}/12 | Secondary card, line 2, beside the stamp glyph |
-| `home.cta.lessons.aria` | שיעורים, {done} מתוך 12 הושלמו | Replaced by the two plural keys below (fix round, K11); kept until the integrator removes unused keys |
 | `home.cta.lessons.aria.one` | שיעורים, שיעור אחד מתוך 12 הושלם | Exactly 1 lesson done |
 | `home.cta.lessons.aria.other` | שיעורים, {done} מתוך 12 הושלמו | 0, and 2 to 12 |
 | `home.cta.challenge` | האתגר של השבוע | Secondary card, line 1 |
@@ -266,7 +265,6 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `strip.add.aria` | פריים חדש | |
 | `strip.add.tooltip` | פריים חדש (N) | |
 | `strip.counter` | {n}/120 | Muted-on-film counter |
-| `strip.counter.aria` | {n} פריימים מתוך 120 | |
 | `strip.reorder.hint` | לחיצה ארוכה וגרירה כדי להזיז פריים | Tooltip on thumbnails (desktop) and first long-press |
 | `strip.reorder.done.aria` | פריים {from} עבר למקום {to} | Live region |
 | `frameMenu.title` | פריים {n} | Sheet / popover title |
@@ -316,7 +314,6 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `lessonMode.chip` | שיעור {n} | Ink chip in the goal strip |
 | `lessonMode.goal` | {goal} | From `lessons.js`, max 28 chars |
 | `lessonMode.progress` | {done}/{total} צוירו | e.g. "3/6 צוירו" |
-| `lessonMode.progress.aria` | {done} מתוך {total} פריימים ריקים צוירו | |
 | `lessonMode.hints` | רמזים | Switch label (lessons 2, 6, 7, 10 only) |
 | `lessonMode.hints.on.aria` | רמזים מוצגים | |
 | `lessonMode.hints.off.aria` | רמזים מוסתרים | |
@@ -463,8 +460,6 @@ Tooltips show on desktop hover and keyboard focus. The shortcut letter sits in p
 | `print.done.png.other` | ירדו {sheets} קובצי PNG | Toast |
 | `print.error.pdf` | יצירת ה-PDF נכשלה. נסו להוריד PNG או להדפיס. | Error toast |
 | `print.error.png` | יצירת ה-PNG נכשלה. נסו שוב. | Error toast |
-| `print.file.pdf` | {title}-flipbook.pdf | Filename |
-| `print.file.png` | {title}-sheet-{nn}.png | Filename, `{nn}` two digits |
 | `print.pdf.metaTitle` | {title} · FlipLoop | PDF `/Title` |
 | **Printed on the sheet (canvas-drawn, `direction = "rtl"`, after `document.fonts.ready`)** | | |
 | `sheet.card.number` | {n} | Inside the staple margin, 8 pt, upright |
@@ -764,7 +759,6 @@ Settings card between Storage and Help. Only one of the three state lines shows:
 | Key | Hebrew | Where / notes |
 |---|---|---|
 | `confirm.resize.title` | לשנות את גודל הדף? | Canvas size change when frames have content |
-| `confirm.resize.body` | הציורים יישארו במרכז. מה שיוצא מהשוליים ייחתך, ובצד השני יתווסף שטח ריק. | |
 | `confirm.resize.ok` | לשנות | |
 | `confirm.resize.cancel` | ביטול | |
 | `delete.*` | (see §20) | Project delete |

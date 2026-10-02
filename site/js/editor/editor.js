@@ -23,7 +23,6 @@ import { getSettings, updateSettings, getProgress, updateProgress, rememberColor
 import { isFull, checkNearlyFull } from "../store/storage.js";
 import { downloadDocFile } from "../store/project-file.js";
 import { duplicateProject, TITLE_MAX, nextDefaultTitle } from "../store/projects.js";
-import { lessonText } from "../data/lessons.js";
 import { showW2b } from "../ui/warnings.js";
 import { closeAllSheets } from "../ui/dialog.js";
 import { openDb } from "../store/db.js";
@@ -921,7 +920,10 @@ export class EditorScreen {
    * After the next painted frame (flushEdits): thumbnail, onion, lesson progress, coach (T-14).
    */
   afterEdit(frame) {
-    this.frameRestore = null; // a newer step exists: Ctrl+Z means this step now (contract K4)
+    if (this.frameRestore) {
+      this.frameRestore = null; // a newer step exists: Ctrl+Z means this step now (contract K4)
+      this.emptyTrash(); // and a deleted frame whose toast is gone can no longer come back
+    }
     if (this.doc.frames.indexOf(frame) === this.cur) this.stage.show(frame);
     this.refreshUndoButtons();
     this.autosaver.strokeEnded();

@@ -15,9 +15,7 @@ import { getProgress, updateProgress } from "../store/settings.js";
 import { openSheet } from "../ui/dialog.js";
 import { toast, announce } from "../ui/toast.js";
 import { iconEl } from "../ui/icons.js";
-
-// Part B choreography: playback itself begins 360 ms after the Play press (editor/playback.js).
-const PLAY_LEAD_MS = 360;
+import { PLAY_LEAD_MS } from "./playback.js"; // the lead-in of the Play choreography, one constant (K12)
 
 export class LessonMode {
   constructor(ed) {

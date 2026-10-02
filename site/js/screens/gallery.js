@@ -241,7 +241,10 @@ export class GalleryScreen {
       anchor,
       owner: this,
       body: h("div", { class: "frame-menu" },
-        item("open", t("gallery.menu.open"), () => { location.hash = `#/editor/${p.id}`; }),
+        item("open", t("gallery.menu.open"), () => {
+          anchor.closest(".project-card")?.classList.add("is-opening"); // K10, same as the card's own link
+          location.hash = `#/editor/${p.id}`;
+        }),
         item("duplicate", t("gallery.menu.duplicate"), () => this.duplicate(p)),
         item("rename", t("gallery.menu.rename"), () => this.rename(p)),
         item("download", t("gallery.menu.download"), () => this.download(p)),

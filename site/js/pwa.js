@@ -245,6 +245,8 @@ export async function registerServiceWorker(app = {}) {
     console.warn("Service worker not registered", err);
     return null;
   }
+  // A harness that blocks service workers resolves register() with undefined: nothing to watch.
+  if (!reg) return null;
   const watch = (worker) => {
     worker?.addEventListener("statechange", () => {
       if (worker.state === "installed" && navigator.serviceWorker.controller) found();
