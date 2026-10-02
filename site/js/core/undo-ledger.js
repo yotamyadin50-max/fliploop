@@ -11,6 +11,20 @@ export function budgetFor(deviceMemory) {
   return typeof deviceMemory === "number" && deviceMemory <= 2 ? BUDGET_LOW_MEMORY : BUDGET_DEFAULT;
 }
 
+/** True when two pixel buffers hold the same bytes: a gesture that changed nothing is not a step. */
+export function sameBytes(a, b) {
+  const n = a.length;
+  if (n !== b.length) return false;
+  if (n % 4 === 0 && a.byteOffset % 4 === 0 && b.byteOffset % 4 === 0) {
+    const x = new Uint32Array(a.buffer, a.byteOffset, n / 4);
+    const y = new Uint32Array(b.buffer, b.byteOffset, n / 4);
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+    return true;
+  }
+  for (let i = 0; i < n; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export class UndoLedger {
   constructor({ budgetBytes = BUDGET_DEFAULT, maxSteps = MAX_STEPS, onEvict } = {}) {
     this.budgetBytes = budgetBytes;

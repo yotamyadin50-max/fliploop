@@ -813,6 +813,13 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
+| `confirm.resize.body.square` | הציורים יישארו במרכז. מה שמצויר בצדדים, מחוץ לריבוע, ייחתך. אחרי השינוי אי אפשר לחזור צעד אחורה. | Resize dialog body, 4:3 to square. Text given in `12-fix-direction.md` item 2.2 (R9). Replaces `confirm.resize.body` at the call site. |
+| `confirm.resize.body.wide` | הציורים יישארו במרכז, ובשני הצדדים יתווסף שטח ריק. אחרי השינוי אי אפשר לחזור צעד אחורה. | Resize dialog body, square to 4:3. Text given in item 2.2 (R9). |
+| `frameMenu.hold.less.aria` | פחות החזקה | aria-label of the hold stepper's minus button (A13, COPY-C-17). Text given in item 2.17. |
+| `frameMenu.hold.more.aria` | יותר החזקה | aria-label of the hold stepper's plus button. Text given in item 2.17. |
+| `tool.eraser.s.aria` | מחק דק, 8 פיקסלים | Working draft. aria-label of the eraser width option (R10: the eraser has its own sizes). Same pattern as `tool.pencil.s.aria`. |
+| `tool.eraser.m.aria` | מחק בינוני, 20 פיקסלים | Working draft. Same pattern as `tool.pencil.m.aria`. |
+| `tool.eraser.l.aria` | מחק עבה, 40 פיקסלים | Working draft. Same pattern as `tool.pencil.l.aria`. |
 
 ### 24.3 WS3
 
