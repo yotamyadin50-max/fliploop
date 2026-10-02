@@ -265,12 +265,13 @@ export class EditorScreen {
       getFrame: () => this.frame,
       getTool: () => this.tool,
       getColor: () => this.color,
-      getWidthPx: () => WIDTHS[this.tool === "eraser" ? this.eraserWidth : this.pencilWidth],
+      getWidthPx: () => DrawingInput.widthPx(this.tool, this.tool === "eraser" ? this.eraserWidth : this.pencilWidth),
       undo: this.undo,
       canEdit: (f) => !f.locked,
       onBlocked: () => this.lessonMode?.onBlocked(),
       onChange: () => this.stage.queue(() => this.frame),
       onStrokeEnd: (f) => this.afterEdit(f),
+      onCancel: () => this.autosaver?.strokeEnded(), // the restored frame was marked changed: save it again
       isPlaying: () => this.player.playing,
       onTapWhilePlaying: () => this.player.stop(),
     });
@@ -300,11 +301,12 @@ export class EditorScreen {
   renderPanel() {
     clear(this.panel);
     if (!isDesktop()) return;
-    this.panel.append(
+    // Lessons are drawn for 480x360: no canvas size control there (R9).
+    this.panel.append(...[
       h("div", { class: "panel-group" }, h("h3", { class: "panel-title" }, t("colors.title")), colorPanel(this, { context: "panel" })),
       onionPanel(this),
-      sizePanel(this),
-      clearButton(this));
+      this.doc.isLesson ? null : sizePanel(this),
+      clearButton(this)].filter(Boolean));
   }
 
   buildPlaybar() {
@@ -482,6 +484,7 @@ export class EditorScreen {
         title: t(name === "eraser" ? "tool.eraser.sheet" : "tool.pencil.sheet"),
         body: widthPanel(this, name, { onDone: () => s.close() }),
         anchor: el,
+        side: isDesktop() ? this.tools : null, // K8: beside the tool rail, not over it
         owner: this,
       });
       return;
@@ -511,6 +514,31 @@ export class EditorScreen {
     more.classList.toggle("is-move", this.tool === "move");
     more.replaceChildren(iconEl(this.tool === "move" ? "move" : "more"), h("span", { class: "tool-key__label" }, t("tool.more")));
     this.stage?.el.classList.toggle("stage--move", this.tool === "move");
+  }
+
+  /**
+   * The slower follow-up of an edit (T-14): thumbnails, onion ghosts, lesson progress and coach
+   * checks. afterEdit() queues it for after the next painted frame; anything that needs the
+   * result at once (Space before Play) calls it directly.
+   */
+  flushEdits() {
+    clearTimeout(this.editTimer);
+    cancelAnimationFrame(this.editFrame);
+    this.editTimer = null;
+    const frames = this.editedFrames;
+    this.editedFrames = null;
+    if (!frames || this.disposed) return;
+    let nearCurrent = false;
+    for (const frame of frames) {
+      const i = this.doc.frames.indexOf(frame);
+      if (i < 0) continue; // deleted in the meantime
+      if (Math.abs(i - this.cur) <= 2) nearCurrent = true;
+      this.strip.updateCell(i);
+      this.lessonMode?.afterStroke(i);
+    }
+    // The current frame counts too: its own opaque paint decides where ghosts go on top (R12).
+    if (nearCurrent) this.stage.renderOnion(this.doc.frames, this.cur, this.doc.project.onion);
+    this.advanceCoach("stroke");
   }
 
   /** Persisted, newest first, at most 7, never a base swatch (settings.recentColors). */
@@ -560,7 +588,8 @@ export class EditorScreen {
   openMore(anchor) {
     const s = openSheet({
       title: t("more.title"),
-      body: h("div", { class: "more-sheet" }, moveButton(this, { onDone: () => s.close() }), onionPanel(this), sizePanel(this), clearButton(this)),
+      body: h("div", { class: "more-sheet" }, ...[moveButton(this, { onDone: () => s.close() }), onionPanel(this),
+        this.doc.isLesson ? null : sizePanel(this), clearButton(this)].filter(Boolean)),
       anchor,
       owner: this,
     });
@@ -571,6 +600,8 @@ export class EditorScreen {
     this.doc.project.onion = { ...this.doc.project.onion, ...patch };
     this.doc.projectDirty = true;
     this.stage.renderOnion(this.doc.frames, this.cur, this.doc.project.onion);
+    // Every onion control on screen (side panel, More sheet) follows the state, whoever changed it (the O key too).
+    onionPanel.sync(document, this.doc.project.onion);
     this.autosaver.strokeEnded();
   }
 
@@ -591,24 +622,30 @@ export class EditorScreen {
   }
 
   async requestResize(w, hgt) {
+    if (this.doc.isLesson) return; // lesson drawings and guides are made for 480x360 (R9)
     if (w === this.doc.width && hgt === this.doc.height) return;
+    if (this.input?.active || this.player?.playing) return this.renderPanel();
     this.moreSheet?.close();
     if (this.doc.hasContent()) {
+      // One body per direction, and both say that the steps back are gone (R9).
       const ok = await confirmDialog({
         owner: this,
-        title: t("confirm.resize.title"), body: t("confirm.resize.body"),
+        title: t("confirm.resize.title"), body: t(w === hgt ? "confirm.resize.body.square" : "confirm.resize.body.wide"),
         confirmLabel: t("confirm.resize.ok"), cancelLabel: t("confirm.resize.cancel"),
       });
       if (!ok || this.disposed) { if (!this.disposed) this.renderPanel(); return; }
     }
+    // What a crop cuts off stays in memory until the Editor is left: changing back restores
+    // every frame that was not edited in between (Doc.resize). Undo patches are in the old
+    // coordinates, so they cannot survive.
     this.doc.resize(w, hgt);
     this.stage.setSize(w, hgt);
     this.undo.clear();
+    this.frameRestore = null;
     this.strip.render();
     this.select(this.cur);
     this.fitStage();
     this.renderPanel();
-    this.lessonMode?.recomputeAll();
     toast(t(w === hgt ? "toast.canvasResized.square" : "toast.canvasResized.wide"));
     this.autosaver.frameOp();
   }
@@ -616,31 +653,42 @@ export class EditorScreen {
   clearFrame() {
     if (this.disposed) return; // a stale sheet must never write (Critic F1)
     this.moreSheet?.close();
+    if (this.input?.active || this.player?.playing) return;
     const f = this.frame;
     if (f.locked) return this.lessonMode?.onBlocked();
-    if (!frameHasInk(f)) return;
     const before = this.undo.begin(f);
     f.ctx.clearRect(0, 0, f.canvas.width, f.canvas.height);
+    // In a lesson the frame goes back to its prepared drawing, not to empty (R16, contract K5).
+    this.lessonMode?.paintPrepared?.(f, this.cur);
+    // Nothing changed (already empty, or already the prepared drawing): no step, no toast.
+    if (!this.undo.commit(f, { x: 0, y: 0, w: f.canvas.width, h: f.canvas.height }, before)) return;
     f.touch();
-    this.undo.commit(f, { x: 0, y: 0, w: f.canvas.width, h: f.canvas.height }, before);
     this.afterEdit(f);
-    toast(t("toast.frameCleared"), { action: { label: t("common.undo"), onClick: () => this.doUndo(f) } });
+    toast(t("toast.frameCleared"), { owner: this, action: { label: t("common.undo"), onClick: () => this.doUndo(f) } });
   }
 
-  async doUndo(frame = this.frame) {
-    if (this.player.playing || !(await this.undo.undo(frame))) return;
+  /** No frame given (the key, the tool button): a just-deleted frame comes back first (contract K4). */
+  async doUndo(frame = null) {
+    if (this.disposed || this.input?.active || this.player.playing) return;
+    if (!frame && this.frameRestore) {
+      const restore = this.frameRestore;
+      this.frameRestore = null;
+      try { return await restore(); } finally { this.refreshUndoButtons(); }
+    }
+    frame = frame || this.frame;
+    if (this.doc.frames.indexOf(frame) < 0 || !(await this.undo.undo(frame))) return;
     this.afterEdit(frame);
   }
 
   async doRedo(frame = this.frame) {
-    if (this.player.playing || !(await this.undo.redo(frame))) return;
+    if (this.disposed || this.input?.active || this.player.playing || !(await this.undo.redo(frame))) return;
     this.afterEdit(frame);
   }
 
   refreshUndoButtons() {
     if (!this.toolKeys) return;
     const id = this.frame?.id;
-    const canU = !!id && this.undo.canUndo(id);
+    const canU = !!this.frameRestore || (!!id && this.undo.canUndo(id));
     const canR = !!id && this.undo.canRedo(id);
     this.toolKeys.undo.disabled = !canU;
     this.toolKeys.redo.disabled = !canR;
@@ -650,16 +698,20 @@ export class EditorScreen {
     this.toolKeys.redo.title = t(canR ? "tool.redo.tooltip" : "tool.redo.disabled.tooltip");
   }
 
-  /** After any pixel change on a frame: redraw, thumbnails, onion, lesson progress, save. */
+  /**
+   * After any pixel change on a frame. At once: the canvas, the undo buttons, the save.
+   * After the next painted frame (flushEdits): thumbnail, onion, lesson progress, coach (T-14).
+   */
   afterEdit(frame) {
-    const i = this.doc.frames.indexOf(frame);
-    if (i === this.cur) this.stage.show(frame);
-    else if (Math.abs(i - this.cur) <= 2) this.stage.renderOnion(this.doc.frames, this.cur, this.doc.project.onion);
-    this.strip.updateCell(i);
-    this.lessonMode?.afterStroke(i);
+    this.frameRestore = null; // a newer step exists: Ctrl+Z means this step now (contract K4)
+    if (this.doc.frames.indexOf(frame) === this.cur) this.stage.show(frame);
     this.refreshUndoButtons();
     this.autosaver.strokeEnded();
-    this.advanceCoach("stroke");
+    (this.editedFrames ||= new Set()).add(frame);
+    if (this.editTimer) return;
+    const run = () => this.flushEdits();
+    this.editFrame = requestAnimationFrame(() => setTimeout(run, 0));
+    this.editTimer = setTimeout(run, 150); // a hidden tab gets no animation frame
   }
 
   // ---------- playback ----------
@@ -837,17 +889,36 @@ export class EditorScreen {
     const tag = e.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
     const mod = e.ctrlKey || e.metaKey;
-    if (mod && e.code === "KeyZ") {
+    // While a stroke is open no key changes anything: undo under the pen, a frame switch or a
+    // tool change in the middle of a gesture all corrupted the step being drawn (T-04).
+    const stroke = !!this.input?.active;
+    if (mod && (e.code === "KeyZ" || e.code === "KeyY")) {
       e.preventDefault();
-      return e.shiftKey ? this.doRedo() : this.doUndo();
+      if (stroke) return;
+      return e.code === "KeyY" || e.shiftKey ? this.doRedo() : this.doUndo();
     }
-    if (mod && e.code === "KeyY") { e.preventDefault(); return this.doRedo(); }
     if (mod || e.altKey) return;
+    if (e.code === "Space") {
+      // Space is Play or Stop wherever the focus is (R11); Enter activates the focused control.
+      // The key-up would click a focused button as well, so it is swallowed once.
+      e.preventDefault();
+      if (!this.spaceUp) {
+        this.spaceUp = (ev) => { if (ev.code === "Space" && this.spaceDown) { this.spaceDown = false; ev.preventDefault(); } };
+        document.addEventListener("keyup", this.spaceUp, true);
+        this.cleanups.push(() => document.removeEventListener("keyup", this.spaceUp, true));
+      }
+      this.spaceDown = true;
+      if (stroke || e.repeat) return;
+      this.flushEdits(); // lesson progress of the last stroke is settled before Play
+      return this.togglePlay();
+    }
+    if (e.code === "ArrowRight" || e.code === "ArrowLeft") {
+      e.preventDefault();
+      return stroke ? undefined : this.step(e.code === "ArrowRight" ? 1 : -1);
+    }
+    // Single-letter shortcuts can be switched off in Settings (R13, contract K2). Missing means on.
+    if (stroke || getSettings().letterShortcuts === false) return;
     switch (e.code) {
-      case "Space":
-        if (tag === "BUTTON" || tag === "A") return; // let the focused control handle it
-        e.preventDefault();
-        return this.togglePlay();
       case "KeyB": return this.setTool("pencil");
       case "KeyE": return this.setTool("eraser");
       case "KeyG": return this.setTool("fill");
@@ -856,16 +927,14 @@ export class EditorScreen {
         const k = { Digit1: "s", Digit2: "m", Digit3: "l" }[e.code];
         return this.setWidth(this.tool === "eraser" ? "eraser" : "pencil", k);
       }
-      case "KeyO": return this.setOnion({ enabled: !this.doc.project.onion.enabled });
+      case "KeyO": {
+        const enabled = !this.doc.project.onion.enabled;
+        this.setOnion({ enabled });
+        return announce(t(enabled ? "onion.toggle.on.aria" : "onion.toggle.off.aria"));
+      }
       case "KeyN": return this.addFrame();
       case "KeyD": return this.duplicateFrame(this.cur);
-      case "ArrowRight": e.preventDefault(); return this.step(1);
-      case "ArrowLeft": e.preventDefault(); return this.step(-1);
       default:
     }
   }
-}
-
-export function lessonTitleFor(n) {
-  return lessonText(n).title;
 }

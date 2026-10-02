@@ -476,6 +476,13 @@ export const STRINGS = {
   "confirm.resize.body": "הציורים יישארו במרכז. מה שיוצא מהשוליים ייחתך, ובצד השני יתווסף שטח ריק.",
   "confirm.resize.ok": "לשנות",
   "confirm.resize.cancel": "ביטול",
+  "confirm.resize.body.square": "הציורים יישארו במרכז. מה שמצויר בצדדים, מחוץ לריבוע, ייחתך. אחרי השינוי אי אפשר לחזור צעד אחורה.",
+  "confirm.resize.body.wide": "הציורים יישארו במרכז, ובשני הצדדים יתווסף שטח ריק. אחרי השינוי אי אפשר לחזור צעד אחורה.",
+  "frameMenu.hold.less.aria": "פחות החזקה",
+  "frameMenu.hold.more.aria": "יותר החזקה",
+  "tool.eraser.s.aria": "מחק דק, 8 פיקסלים",
+  "tool.eraser.m.aria": "מחק בינוני, 20 פיקסלים",
+  "tool.eraser.l.aria": "מחק עבה, 40 פיקסלים",
   "tool.width.s": "דק",
   "tool.width.m": "בינוני",
   "tool.width.l": "עבה"
