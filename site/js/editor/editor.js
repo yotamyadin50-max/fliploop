@@ -23,8 +23,13 @@ import { downloadDocFile } from "../store/project-file.js";
 import { duplicateProject, TITLE_MAX, nextDefaultTitle } from "../store/projects.js";
 import { lessonText } from "../data/lessons.js";
 import { showW2b } from "../ui/warnings.js";
+import { closeAllSheets } from "../ui/dialog.js";
+import { openDb } from "../store/db.js";
+import { onPeerMessage } from "../store/channel.js";
+import { holdUnsaved, releaseUnsaved } from "../store/rescue.js";
 
 let w5ShownThisSession = false;
+const VIEW_KEY = "fliploop-view:"; // sessionStorage, per project: the frame, tool and colour to come back to
 
 export class EditorScreen {
   constructor(section, router) {
@@ -37,19 +42,31 @@ export class EditorScreen {
     this.cur = 0;
     this.cleanups = [];
     this.coach = null;
+    // Only while a save is failing: the browser's own "leave this page?" prompt (S7).
+    this.onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ""; };
   }
 
   // ---------- lifecycle ----------
   async mount({ id, overlay }, view = null) {
     this.projectId = id;
+    this.doc = null;
     this.renderLoading();
     let doc = null;
+    let failed = null;
     try {
       doc = await Doc.load(id);
     } catch (err) {
+      failed = err || new Error("load failed");
+      if (typeof failed === "object") failed.handled = true; // this screen says so itself
       console.error("Editor load failed", err);
     }
     if (this.disposed) return;
+    if (failed) {
+      // A read that failed is not "no such project": nothing was deleted, and it can be tried again.
+      this.renderLoadError({ id, overlay }, view);
+      this.router.setTitle(t("editor.loadFailed.title"));
+      return;
+    }
     if (!doc) {
       this.renderNotFound();
       this.router.setTitle(t("meta.title.notFound"));
@@ -58,9 +75,10 @@ export class EditorScreen {
     this.doc = doc;
     this.fallbackTitle = await nextDefaultTitle(id);
     if (this.disposed) return;
+    view ??= this.storedView(); // no update-resume view: the place this tab last left the project at (F13)
     this.restoreView(view);
     this.build();
-    if (view && Number.isInteger(view.cur) && view.cur > 0) this.select(view.cur, { instantScroll: true });
+    if (view && Number.isInteger(view.cur) && view.cur > 0) this.select(Math.min(view.cur, doc.count - 1), { instantScroll: true });
     this.router.setTitle(doc.project.title);
     if (overlay === "export") this.openExport();
     this.startCoach();
@@ -96,6 +114,109 @@ export class EditorScreen {
     if (view.eraserWidth in WIDTHS) this.eraserWidth = view.eraserWidth;
   }
 
+  // ---------- WS1: view memory, two tabs, unsaved work (fix round 2026-10) ----------
+  /** The view this tab last had on this project (sessionStorage), or null. */
+  storedView() {
+    try {
+      const raw = sessionStorage.getItem(VIEW_KEY + this.projectId);
+      const view = raw ? JSON.parse(raw) : null;
+      return view && typeof view === "object" ? view : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Remembers the frame, tool and colour for a reload or a later visit in this tab (F13). */
+  saveView() {
+    const view = this.viewState();
+    if (!view) return;
+    try {
+      sessionStorage.setItem(VIEW_KEY + this.projectId, JSON.stringify(view));
+    } catch { /* storage blocked: the project simply opens on frame 1 */ }
+  }
+
+  /** Everything build() set up, taken down again. save: write what is unsaved first. */
+  async teardown({ save }) {
+    this.player?.stop();
+    this.exportCtl?.close({ fromRoute: true });
+    this.coach?.close();
+    this.cleanups.forEach((fn) => fn());
+    this.cleanups = [];
+    this.input?.destroy();
+    removeEventListener("beforeunload", this.onBeforeUnload);
+    if (save) await this.autosaver?.dispose();
+    else this.autosaver?.stop();
+  }
+
+  /** Loads the stored version again in place: same frame, tool and colour. Unsaved changes here are dropped. */
+  async reloadDocument() {
+    if (this.reloading || this.disposed || !this.doc) return;
+    this.reloading = true;
+    try {
+      const view = this.viewState();
+      this.conflictSheet?.close(undefined, { immediate: true });
+      closeAllSheets();
+      await this.teardown({ save: false });
+      this.autosaver = null;
+      if (!this.disposed) await this.mount({ id: this.projectId, overlay: null }, view);
+    } finally {
+      this.reloading = false;
+    }
+  }
+
+  /** Another tab saved this project. With nothing unsaved here, take its version at once (R3). */
+  onPeerSaved({ type, projectId, updatedAt }) {
+    if (type !== "saved" || projectId !== this.projectId || this.disposed || !this.autosaver) return;
+    if (!(updatedAt > this.autosaver.baseUpdatedAt)) return;
+    const idle = this.autosaver.isClean && !this.input.active && !this.undo.busy && !this.strip.drag && !this.exportCtl;
+    if (idle) this.reloadDocument();
+    // Otherwise the next write finds the newer version, writes nothing, and showConflict() asks.
+  }
+
+  /** The two-tab dialog: load the newer version, or download what is here. Never a silent overwrite. */
+  showConflict() {
+    if (this.conflictSheet || this.disposed) return;
+    const body = h("div", { class: "dialog__content" },
+      h("p", {}, t("conflict.body")),
+      h("div", { class: "dialog__actions" },
+        h("button", { class: "btn btn--primary btn--sheet", type: "button", onclick: () => this.reloadDocument() }, t("conflict.reload")),
+        h("button", { class: "btn btn--secondary btn--sheet", type: "button", onclick: () => this.downloadFromMemory() }, iconEl("download"), t("conflict.download"))));
+    this.conflictSheet = openSheet({ title: t("conflict.title"), body, kind: "dialog", owner: this, onClose: () => { this.conflictSheet = null; } });
+  }
+
+  /** The Editor is closing while the save still fails (S7): keep the document, and say so on the next screen. */
+  keepUnsaved() {
+    const doc = this.doc;
+    holdUnsaved(doc);
+    if (!this.autosaver.conflict) this.autosaver.rescue(); // the next launch tries IndexedDB again
+    const note = toast(t("w3.left"), {
+      id: "unsaved", persistent: true, warn: true, icon: "warn",
+      action: { label: t("w3.action"), onClick: () => {
+        const name = downloadDocFile(doc);
+        releaseUnsaved(doc);
+        toast(t("export.done.project", { filename: name, title: doc.project.title }));
+      } },
+    });
+    note.el?.querySelector(".toast__close-text")?.addEventListener("click", () => releaseUnsaved(doc));
+  }
+
+  renderLoadError(params, view) {
+    clear(this.section);
+    const retry = h("button", { class: "btn btn--primary", type: "button", onclick: async () => {
+      retry.disabled = true;
+      await openDb({ retry: true }).catch((err) => { if (err && typeof err === "object") err.handled = true; });
+      if (!this.disposed) this.mount(params, view);
+    } }, t("storage.readFailed.retry"));
+    this.section.append(
+      h("header", { class: "topbar" }, this.backLink()),
+      h("div", { class: "not-found storage-error" },
+        h("div", { class: "card card--center", role: "alert" },
+          iconEl("warn", { size: 28 }),
+          h("h1", { class: "h2" }, t("editor.loadFailed.title")),
+          h("p", {}, t("storage.readFailed.body")),
+          h("div", { class: "row-actions" }, retry))));
+  }
+
   async update({ id, overlay }) {
     if (id !== this.projectId) return false; // different project: the router remounts
     if (!this.doc) return true;
@@ -106,12 +227,9 @@ export class EditorScreen {
 
   async unmount() {
     this.disposed = true;
-    this.player?.stop();
-    this.exportCtl?.close({ fromRoute: true });
-    this.coach?.close();
-    this.cleanups.forEach((fn) => fn());
-    this.input?.destroy();
-    await this.autosaver?.dispose();
+    this.saveView();
+    await this.teardown({ save: true });
+    if (this.autosaver && !this.autosaver.isClean) this.keepUnsaved();
   }
 
   // ---------- states ----------
@@ -187,7 +305,9 @@ export class EditorScreen {
     title.addEventListener("keydown", (e) => { if (e.key === "Enter") title.blur(); });
     this.titleInput = title;
     this.h1 = h("h1", { class: "sr-only" }, doc.project.title);
-    this.status = h("button", { class: "save-status", type: "button", onclick: () => this.w3?.querySelector("button")?.focus() });
+    // Plain status text (a live region), not a control: only the failed state holds a button.
+    this.status = h("span", { class: "save-status", role: "status" });
+    this.statusState = null;
     this.setStatus("saved");
     const exportBtn = h("a", { class: "btn btn--compact btn--secondary topbar__export", href: `#/editor/${doc.project.id}/export`, "aria-label": t("editor.export.aria") }, iconEl("export", { size: 20 }), h("span", { class: "topbar__export-label" }, t("editor.export")));
     this.topbar = h("header", { class: "topbar" }, this.backLink(), this.h1, title,
@@ -278,7 +398,22 @@ export class EditorScreen {
     this.autosaver = new Autosaver(doc, {
       onStatus: (s, info) => this.onSaveStatus(s, info),
       onSaved: () => this.afterSave(),
+      onConflict: () => this.showConflict(),
+      activeStroke: () => this.input?.active || null,
     });
+    this.cleanups.push(onPeerMessage((msg) => this.onPeerSaved(msg)));
+    // The frame, tool and colour survive a reload of this tab (F13).
+    const keepView = () => { if (document.visibilityState === "hidden") this.saveView(); };
+    const keepViewNow = () => this.saveView();
+    document.addEventListener("visibilitychange", keepView);
+    addEventListener("pagehide", keepViewNow);
+    this.cleanups.push(() => { document.removeEventListener("visibilitychange", keepView); removeEventListener("pagehide", keepViewNow); });
+    // "נשמר" means everything on the screen is stored (R1): the label follows a stroke from
+    // its first pixel, and goes back by itself when a stroke is cancelled. DrawingInput's own
+    // listeners were added first, so `input.active` is already up to date here.
+    for (const type of ["pointerdown", "pointerup", "pointercancel", "lostpointercapture"]) {
+      this.stage.display.addEventListener(type, () => this.autosaver.refresh());
+    }
 
     const ro = new ResizeObserver(() => this.fitStage());
     ro.observe(this.canvasRegion);
@@ -744,6 +879,7 @@ export class EditorScreen {
     const title = v.trim() || this.fallbackTitle;
     this.doc.project.title = title;
     this.doc.projectDirty = true;
+    if (this.doc.project.touched === false) this.doc.project.touched = true; // a rename makes it the user's own (R5)
     this.h1.textContent = title;
     this.router.setTitle(title);
     this.autosaver.strokeEnded();
@@ -755,21 +891,24 @@ export class EditorScreen {
       saved: ["check", "editor.status.saved"],
       failed: ["warn", "editor.status.failed"],
     };
+    if (state === this.statusState) return; // same words: nothing for a screen reader to hear again
+    this.statusState = state;
     const [ic, key] = map[state];
     this.status.className = `save-status save-status--${state}`;
-    this.status.replaceChildren(iconEl(ic, { size: 18 }), h("span", {}, t(key)));
-    this.status.disabled = state !== "failed";
-    if (state === "failed") this.status.setAttribute("aria-label", t("editor.status.failed.aria"));
-    else this.status.removeAttribute("aria-label");
+    const content = [iconEl(ic, { size: 18 }), h("span", {}, t(key))];
+    // A control only when there is something to act on: the failed state leads to the W3 strip.
+    this.status.replaceChildren(...(state === "failed"
+      ? [h("button", { class: "save-status__btn", type: "button", "aria-label": t("editor.status.failed.aria"), onclick: () => this.w3?.querySelector("button")?.focus() }, ...content)]
+      : content));
   }
 
   onSaveStatus(state, info = {}) {
+    if (this.disposed) return;
     this.setStatus(state);
-    if (state === "failed") this.w3.hidden = false;
-    if (state === "saved" && info.recovered) {
-      this.w3.hidden = true;
-      toast(t("w3.recovered"));
-    }
+    this.w3.hidden = state !== "failed";
+    if (state === "failed") addEventListener("beforeunload", this.onBeforeUnload);
+    else removeEventListener("beforeunload", this.onBeforeUnload);
+    if (state !== "failed" && info.recovered) toast(t("w3.recovered"));
   }
 
   afterSave() {
@@ -782,7 +921,7 @@ export class EditorScreen {
 
   downloadFromMemory() {
     const name = downloadDocFile(this.doc);
-    toast(t("export.done.project", { filename: name }));
+    toast(t("export.done.project", { filename: name, title: this.doc.project.title })); // K6: both, the string picks one
   }
 
   renderW2(e) {

@@ -770,6 +770,44 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
+| `conflict.title` | הציור הזה השתנה בלשונית אחרת | Dialog title, Editor: another tab saved a newer version of this project (R3). Draft from the fix direction |
+| `conflict.body` | כדי לא לדרוס את הגרסה החדשה, מכאן אי אפשר לשמור. | Dialog body |
+| `conflict.reload` | לטעון את הגרסה החדשה | Primary: reloads the document in place |
+| `conflict.download` | להוריד את מה שיש כאן | Secondary: downloads this tab's drawing as a project file |
+| `storage.readFailed.title` | לא הצלחנו לקרוא את העבודות | Gallery error state and the Home banner when a read fails (R4). Never the empty state |
+| `storage.readFailed.body` | שום דבר לא נמחק. נסו שוב בעוד רגע. | Second line of that state, also under `editor.loadFailed.title` |
+| `storage.readFailed.retry` | לנסות שוב | Button |
+| `editor.loadFailed.title` | לא הצלחנו לפתוח את הציור | Editor: the project could not be read (distinct from "not found") |
+| `w0.title` | אי אפשר לשמור בדפדפן הזה | Fixed banner on Home, Gallery and Settings when the browser blocks storage (R4) |
+| `w0.body` | הדפדפן חוסם את השמירה במכשיר, למשל בגלישה פרטית. מה שתציירו כאן לא יישמר. נסו בחלון רגיל או בדפדפן אחר. | Banner body |
+| `storage.blocked.toast` | הדפדפן חוסם את השמירה במכשיר, אז הפעולה לא בוצעה. | Toast for any action that needs storage while it is blocked (new animation, lesson, challenge, starter, backup, import) |
+| `storage.failed.toast` | הפעולה לא הצליחה. שום דבר לא נמחק. נסו שוב בעוד רגע. | Toast for a storage error on a browser where storage normally works |
+| `w3.left` | הציור האחרון לא נשמר. | Persistent toast on the next screen when the Editor was left while saving was failing, with `w3.action` |
+| `import.none.one` | הפרויקט הזה כבר כאן. שום דבר לא השתנה. | Toast: the imported file is identical to a project on this device |
+| `import.none.other` | כל הפרויקטים בקובץ כבר כאן. שום דבר לא השתנה. | Toast: a backup with nothing new |
+| `import.skipped.one` | פרויקט אחד כבר היה כאן ולא יובא שוב | Toast line |
+| `import.skipped.other` | {n} פרויקטים כבר היו כאן ולא יובאו שוב | Toast line |
+| `import.copies.one` | פרויקט אחד כבר היה כאן בגרסה אחרת, אז יובא כעותק | Toast line, backup import |
+| `import.copies.other` | {n} פרויקטים כבר היו כאן בגרסה אחרת, אז יובאו כעותקים | Toast line, backup import |
+| `import.clash.one` | כבר יש כאן פרויקט של אותו שיעור או אתגר, אז הוא יובא כעותק חופשי | Toast line: a lesson or challenge project that clashes with an existing one |
+| `import.clash.other` | {n} פרויקטים של שיעור או אתגר שכבר יש כאן יובאו כעותקים חופשיים | Toast line |
+| `import.bad.one` | פרויקט אחד בקובץ פגום ולא יובא | Toast line: a backup entry that is not a valid project |
+| `import.bad.other` | {n} פרויקטים בקובץ פגומים ולא יובאו | Toast line |
+| `import.frames.blank.one` | פריים אחד בקובץ לא נקרא ויובא ריק | Toast line: a damaged frame image, or one that is not the project's size |
+| `import.frames.blank.other` | {n} פריימים בקובץ לא נקראו ויובאו ריקים | Toast line |
+| `import.stamps` | החותמות שבגיבוי נוספו | Toast line: the backup's lesson and challenge stamps were merged in |
+| `import.partial` | יובאו {n} מתוך {total} פרויקטים. לשאר אין מקום. | Toast before W2b when storage fills up in the middle of a backup import |
+| `import.stopped` | הייבוא נעצר. יובאו {n} מתוך {total} פרויקטים. | Toast when an import stops on an error other than a full storage |
+| `import.error.unreadable.one` | הפריים שבקובץ פגום ולא נקרא. שום דבר לא השתנה. | Import error: no frame image in the file can be read (a file with one frame) |
+| `import.error.unreadable.other` | {n} הפריימים שבקובץ פגומים ולא נקראו. שום דבר לא השתנה. | Same, several frames. The count is the number of damaged frames |
+| `gallery.starter.numbered` | {starter} {n} | Title of a repeat starter project, for example "כדור 2" |
+| `delete.restoredAsCopy` | בינתיים נוצר פרויקט חדש לשיעור הזה, אז הישן חזר כעותק חופשי | Toast after undoing the delete of a lesson or challenge project when a new one was made in between |
+| `settings.shortcuts.label` | קיצורי מקלדת של אות אחת | Settings, Help card, switch (default on). Draft from the fix direction |
+| `settings.shortcuts.hint` | למשל B לעיפרון ו-N לפריים חדש. רווח, חצים ו-Ctrl+Z פועלים תמיד. | Muted line under the switch |
+| `settings.report.button` | להוריד דוח תקלות | Settings, Help card: saves the local error log as a text file |
+| `settings.report.hint` | קובץ טקסט קטן שנשאר אצלכם. הוא לא נשלח לשום מקום. | Muted line under the button. Draft from the fix direction |
+| `settings.report.done` | הדוח ירד: {filename} | Toast |
+| `settings.report.file` | fliploop-report-{date}.txt | Filename, `{date}` as yyyy-mm-dd |
 
 ### 24.2 WS2
 

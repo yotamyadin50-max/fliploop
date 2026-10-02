@@ -1,14 +1,46 @@
 // Storage and settings (plan 9).
 import { h, clear } from "../lib/dom.js";
 import { t } from "../lib/i18n.js";
-import { formatBytes, dateDMY } from "../lib/util.js";
+import { formatBytes, dateDMY, dateISO, downloadBlob } from "../lib/util.js";
 import { iconEl } from "../ui/icons.js";
 import { toast } from "../ui/toast.js";
 import { screenHeader } from "./common.js";
 import { estimate, refreshPersisted } from "../store/storage.js";
-import { getSettings, resetTips } from "../store/settings.js";
+import { getSettings, updateSettings, resetTips } from "../store/settings.js";
+import { storageState } from "../store/db.js";
+import { storageStateBanner } from "../ui/warnings.js";
 import { importButton, runBackup } from "./gallery.js";
 import { installState, onInstallChange, promptInstall } from "../pwa.js";
+
+const ERROR_LOG_KEY = "fliploop-errors"; // written by app.js captureErrors()
+
+/** The local error log as plain text (CODE-L12). It stays on the device: this only makes a file. */
+function errorReport() {
+  let entries = [];
+  let note = "";
+  try {
+    entries = JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || "[]");
+    if (!Array.isArray(entries)) entries = [];
+  } catch {
+    note = "The error log could not be read (storage blocked).";
+  }
+  const lines = [
+    "FlipLoop error report",
+    `Made: ${new Date().toISOString()}`,
+    `Address: ${location.origin}${location.pathname}`,
+    `Browser: ${navigator.userAgent}`,
+    `Screen: ${innerWidth}x${innerHeight}, pixel ratio ${devicePixelRatio}`,
+    `Storage: ${storageState()}`,
+    `Entries: ${entries.length} (the last 20 are kept)`,
+    "",
+  ];
+  if (note) lines.push(note, "");
+  if (!entries.length && !note) lines.push("No errors were recorded.");
+  for (const e of entries) {
+    lines.push(`[${e.at || "?"}] ${e.message || "(no message)"}${e.source ? `  (${e.source}:${e.line ?? "?"})` : ""}`);
+  }
+  return lines.join("\r\n") + "\r\n";
+}
 
 export class SettingsScreen {
   constructor(section, router) {
@@ -23,10 +55,12 @@ export class SettingsScreen {
     const credit = t("settings.about.credit");
     const title = "The Illusion of Life";
     const [before, after] = credit.split(title);
+    const banner = storageStateBanner(); // storage blocked: said first, before any figure
     this.section.append(
       screenHeader("#/", "common.back.home", "common.back.home.aria"),
       h("div", { class: "page settings" },
         h("h1", { class: "screen-h1", tabindex: "-1" }, t("settings.h1")),
+        banner ? h("div", { class: "banners" }, banner) : null,
         h("section", { class: "card" }, h("h2", { class: "h3" }, t("settings.storage.h2")), this.storage,
           h("div", { class: "row-actions" },
             h("button", { class: "btn btn--secondary", type: "button", onclick: async () => { await runBackup(); this.renderStorage(); } }, iconEl("download"), t("settings.backup")),
@@ -35,7 +69,11 @@ export class SettingsScreen {
         h("section", { class: "card" }, h("h2", { class: "h3" }, t("settings.help.h2")),
           h("button", { class: "btn btn--secondary", type: "button", onclick: async () => { await resetTips(); toast(t("settings.tips.done")); } }, t("settings.tips.reset")),
           h("p", { class: "muted" }, t("settings.undoNote")),
-          h("p", { class: "muted" }, t("settings.motionNote"))),
+          h("p", { class: "muted" }, t("settings.motionNote")),
+          this.shortcutSwitch(),
+          h("p", { class: "muted small", id: "shortcuts-hint" }, t("settings.shortcuts.hint")),
+          h("button", { class: "btn btn--secondary", type: "button", "aria-describedby": "report-hint", onclick: () => this.downloadReport() }, iconEl("download"), t("settings.report.button")),
+          h("p", { class: "muted small", id: "report-hint" }, t("settings.report.hint"))),
         h("section", { class: "card" }, h("h2", { class: "h3" }, t("settings.about.h2")),
           h("p", { class: "about__name" }, t("settings.about.name")),
           h("p", {}, t("settings.about.privacy")),
@@ -43,6 +81,26 @@ export class SettingsScreen {
     this.renderInstall();
     this.offInstall = onInstallChange(() => this.renderInstall());
     await this.renderStorage();
+  }
+
+  /** Single-letter shortcuts on or off (WCAG 2.1.4; contract K2). Space, arrows and Ctrl+Z are not affected. */
+  shortcutSwitch() {
+    const sw = h("button", { class: "switch", type: "button", role: "switch", "aria-describedby": "shortcuts-hint",
+      "aria-checked": String(getSettings().letterShortcuts !== false),
+      onclick: async () => {
+        const next = sw.getAttribute("aria-checked") !== "true";
+        sw.setAttribute("aria-checked", String(next));
+        await updateSettings({ letterShortcuts: next });
+      } },
+      h("span", { class: "switch__track", "aria-hidden": "true" }, h("span", { class: "switch__thumb" })),
+      h("span", { class: "switch__label" }, t("settings.shortcuts.label")));
+    return sw;
+  }
+
+  downloadReport() {
+    const name = t("settings.report.file", { date: dateISO() });
+    downloadBlob(new Blob([errorReport()], { type: "text/plain;charset=utf-8" }), name);
+    toast(t("settings.report.done", { filename: name }));
   }
 
   /** Install card (PWA pass): one state line; the button only when the browser offers install. */
@@ -64,6 +122,12 @@ export class SettingsScreen {
   }
 
   async renderStorage() {
+    if (storageState() === "blocked") {
+      // No healthy-looking figures on top of storage that does not work (S4).
+      clear(this.storage);
+      this.storage.append(h("p", { class: "protected" }, iconEl("warn", { size: 20 }), h("strong", {}, t("w0.title"))));
+      return;
+    }
     const e = await estimate();
     const granted = await refreshPersisted();
     if (this.disposed) return;

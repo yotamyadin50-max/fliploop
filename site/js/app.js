@@ -19,6 +19,10 @@ import { toast } from "./ui/toast.js";
 import { closeAllSheets } from "./ui/dialog.js";
 import { emit } from "./lib/bus.js";
 import { registerServiceWorker, swVersion, takeResume } from "./pwa.js";
+import { applyRescues } from "./store/rescue.js";
+import { storageState } from "./store/db.js";
+import { purgeUntouched } from "./store/projects.js";
+import { on } from "./lib/bus.js";
 
 const SCREENS = {
   home: HomeScreen,
@@ -178,17 +182,39 @@ function captureErrors() {
   addEventListener("unhandledrejection", (e) => log({ message: String(e.reason?.message || e.reason) }));
 }
 
+/**
+ * One message for any storage failure nobody else reported (store/db.js, contract K1): which
+ * action it was does not matter, the reason does. Blocked storage and a passing fault read
+ * differently.
+ */
+function watchStorageErrors() {
+  let last = 0;
+  on("storage-error", () => {
+    if (Date.now() - last < 1500) return; // one failed action can fail several reads
+    last = Date.now();
+    toast(t(storageState() === "blocked" ? "storage.blocked.toast" : "storage.failed.toast"), { id: "storage-error", icon: "warn", warn: true });
+  });
+}
+
 async function boot() {
   captureErrors();
+  watchStorageErrors();
   document.documentElement.classList.replace("no-js", "js");
   const main = document.getElementById("main");
   main.replaceChildren();
+  let storageUp = true;
   try {
-    await openDb();
+    await openDb(); // answers within 3 s, or the app starts in the "cannot save here" state (R4)
   } catch (err) {
+    storageUp = false;
+    if (err && typeof err === "object") err.handled = true; // the storage banner on Home is the message
     console.error("IndexedDB unavailable", err);
   }
+  // Work that an unload cut off (store/rescue.js) goes back into IndexedDB before any screen reads it.
+  if (storageUp) await applyRescues().catch((err) => console.warn("Rescue records were not applied", err));
   await loadSettings();
+  // Blank projects nobody drew in for a day are removed (R5).
+  if (storageUp) await purgeUntouched().catch((err) => { if (err && typeof err === "object") err.handled = true; });
   refreshPersisted();
   checkNearlyFull({ force: true });
   const router = new Router(main);
@@ -210,7 +236,7 @@ async function boot() {
     busy: () => router.busy || !!screen()?.isBusy?.(),
     view: () => screen()?.viewState?.() ?? null,
     flush: () => screen()?.flush?.() ?? true,
-  });
+  }).catch((err) => console.warn("Service worker setup failed", err));
 }
 
 boot();

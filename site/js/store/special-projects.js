@@ -1,5 +1,6 @@
 // Lesson exercises, Gallery starters and weekly challenge projects.
 import { createProject, findLessonProject, findChallengeProject } from "./projects.js";
+import { getAllProjects } from "./db.js";
 import { getLesson, lessonText, exampleFrames } from "../data/lessons.js";
 import { t } from "../lib/i18n.js";
 
@@ -28,8 +29,13 @@ export async function openLessonProject(n) {
 /** Starter: a free project built from the lesson's example stroke data (never a user's attempt). */
 export async function createStarterProject(starter) {
   const lesson = getLesson(starter.lesson);
+  // Repeat titles get a number: "כדור", "כדור 2", "כדור 3" (G-04).
+  const label = t(starter.labelKey);
+  const taken = new Set((await getAllProjects()).filter((p) => p.touched !== false).map((p) => p.title));
+  let title = label;
+  for (let n = 2; taken.has(title); n++) title = t("gallery.starter.numbered", { starter: label, n });
   return createProject(
-    { kind: "free", title: t(starter.labelKey), fps: lesson.fps, playMode: lesson.playMode },
+    { kind: "free", title, fps: lesson.fps, playMode: lesson.playMode },
     exampleFrames(lesson).map((f) => ({ strokes: f.strokes, hold: f.hold || 1 })),
   );
 }
