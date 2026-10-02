@@ -814,6 +814,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | `print.share.ready` | ה-PDF מוכן. לחצו שוב על "לשתף PDF". | Status line when the PDF took so long to build that the browser no longer accepts the first tap as a share request |
 | `print.share.failed` | השיתוף לא הצליח. אפשר להוריד את ה-PDF ולשלוח אותו. | Error toast when sharing the PDF fails; not shown when the user closes the share sheet |
 | `page404.title` | הדף לא נמצא · FlipLoop | Static, written by hand in `site/404.html`: `<title>` (R51, pattern of R43) |
+| `page404.description` | הדף הזה לא נמצא. מכאן אפשר לחזור ל-FlipLoop. | Static, `site/404.html`: `<meta name="description">`. Its `og:title` and `og:description` repeat `meta.og.title` and `meta.og.description` |
 | `page404.h1` | הדף הזה לא נמצא | Static, `site/404.html`: heading |
 | `page404.body` | אולי הכתובת נכתבה עם טעות. הציורים שלכם נשארו שמורים במכשיר. | Static, `site/404.html`: body line |
 | `page404.home` | הביתה | Static, `site/404.html`: the one link, to the app's Home (R40) |

@@ -500,6 +500,7 @@ export const STRINGS = {
   "print.share.ready": "ה-PDF מוכן. לחצו שוב על \"לשתף PDF\".",
   "print.share.failed": "השיתוף לא הצליח. אפשר להוריד את ה-PDF ולשלוח אותו.",
   "page404.title": "הדף לא נמצא · FlipLoop",
+  "page404.description": "הדף הזה לא נמצא. מכאן אפשר לחזור ל-FlipLoop.",
   "page404.h1": "הדף הזה לא נמצא",
   "page404.body": "אולי הכתובת נכתבה עם טעות. הציורים שלכם נשארו שמורים במכשיר.",
   "page404.home": "הביתה",
