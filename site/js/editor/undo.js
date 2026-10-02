@@ -1,7 +1,7 @@
 // Undo steps as dirty-rectangle patches (plan c): each step keeps only the changed
 // rectangle, before and after. Raw pixels are compressed to PNG right after the step, so
 // the 64 MB (or 32 MB) budget holds 50 steps per frame across a 120-frame project.
-import { UndoLedger, budgetFor } from "../core/undo-ledger.js";
+import { UndoLedger, budgetFor, sameBytes } from "../core/undo-ledger.js";
 import { makeCanvas, canvasToBlob } from "../lib/util.js";
 
 async function toPng(imageData) {
@@ -10,12 +10,17 @@ async function toPng(imageData) {
   return canvasToBlob(c);
 }
 
+/** Runs after the browser has had a chance to paint: nothing here is needed for the next frame. */
+const whenIdle = (fn) => (typeof requestIdleCallback === "function" ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
+
 export class UndoManager {
   constructor({ onEvict, onChange } = {}) {
     this.ledger = new UndoLedger({ budgetBytes: budgetFor(navigator.deviceMemory), onEvict });
     this.onChange = onChange || (() => {});
     this.queue = Promise.resolve();
     this.pending = 0;
+    this.toCompress = [];
+    this.compressing = false;
   }
 
   get busy() {
@@ -31,21 +36,42 @@ export class UndoManager {
     return frame.ctx.getImageData(0, 0, frame.canvas.width, frame.canvas.height);
   }
 
-  /** Records a step for `frame`. rect = changed area; beforeFull = snapshot from begin(). */
-  commit(frame, rect, beforeFull) {
+  /**
+   * Records a step for `frame`. rect = changed area; beforeFull = snapshot from begin();
+   * afterFull = the full frame after the change, when the caller already holds it (fill).
+   * Returns false, and records nothing, when no pixel in the rectangle changed: a gesture
+   * that did nothing is not an undo step (T-11).
+   */
+  commit(frame, rect, beforeFull, afterFull = null) {
     const r = clipRect(rect, frame.canvas.width, frame.canvas.height);
-    if (!r) return;
+    if (!r) return false;
     const before = cropImageData(beforeFull, r);
-    const after = frame.ctx.getImageData(r.x, r.y, r.w, r.h);
+    const after = afterFull ? cropImageData(afterFull, r) : frame.ctx.getImageData(r.x, r.y, r.w, r.h);
+    if (sameBytes(before.data, after.data)) return false;
     const entry = { rect: r, before, after, bytes: before.data.length + after.data.length };
     this.ledger.push(frame.id, entry);
     this.onChange();
-    Promise.all([toPng(before), toPng(after)]).then(([b, a]) => {
-      if (entry.released) return;
-      entry.before = b;
-      entry.after = a;
-      this.ledger.resize(entry, b.size + a.size);
-    }).catch(() => { /* keep raw pixels */ });
+    this.compressLater(entry);
+    return true;
+  }
+
+  /** Raw pixels become PNG off the input path (T-14): the step is usable either way. */
+  compressLater(entry) {
+    this.toCompress.push(entry);
+    if (this.compressing) return;
+    this.compressing = true;
+    const next = () => {
+      const e = this.toCompress.shift();
+      if (!e) { this.compressing = false; return; }
+      if (e.released) return next();
+      Promise.all([toPng(e.before), toPng(e.after)]).then(([b, a]) => {
+        if (e.released) return;
+        e.before = b;
+        e.after = a;
+        this.ledger.resize(e, b.size + a.size);
+      }).catch(() => { /* keep raw pixels */ }).finally(() => whenIdle(next));
+    };
+    whenIdle(next);
   }
 
   canUndo(frameId) { return this.ledger.canUndo(frameId); }
