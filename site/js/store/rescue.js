@@ -60,7 +60,8 @@ export function clearRescue(projectId) {
   } catch { /* storage blocked: there is no record either */ }
 }
 
-function pngToBlob(dataUrl) {
+/** A PNG data URL as a Blob, decoded here (no fetch of a data: URL, so no CSP dependency). */
+export function pngToBlob(dataUrl) {
   const bin = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -93,7 +94,12 @@ async function applyOne(rec) {
   project.updatedAt = Math.max(rec.at, stored.updatedAt + 1);
   const first = records.find((r) => r.id === rec.frameOrder[0]);
   if (first) project.thumbBlob = await thumbFromBlob(first.imageBlob, project.width, project.height);
-  await db.saveProject(project, records, rec.deleted);
+  try {
+    await db.saveProject(project, records, rec.deleted, { expectedUpdatedAt: stored.updatedAt });
+  } catch (err) {
+    if (err?.conflict) return false; // another tab saved in this very moment: its version stays
+    throw err;
+  }
   return true;
 }
 

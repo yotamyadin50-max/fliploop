@@ -1,4 +1,4 @@
-// Autosave (plan d, fix round R1 and R2): 250 ms after the last change, immediately after
+// Autosave (plan d, fix round R1, R2, R3): 250 ms after the last change, immediately after
 // frame operations, at least every 2 s while changes keep coming. Only dirty frames are
 // written, in one transaction with the project record. A failed save raises W3 and retries
 // every 10 s until one succeeds.
@@ -11,6 +11,10 @@
 // `visibilitychange: hidden` the pending work also goes into localStorage, synchronously
 // (store/rescue.js). Boot applies that record. A successful save that leaves nothing
 // pending deletes it.
+//
+// Two tabs: every write names the stored version this tab last read or wrote. If a newer
+// one is stored, nothing is written, the saver stops (`conflict`) and the Editor asks the
+// user. After each save the other tabs are told (store/channel.js).
 import * as db from "./db.js";
 import { canvasToBlob, makeCanvas } from "../lib/util.js";
 import { thumbFromBlob } from "./projects.js";
@@ -18,6 +22,7 @@ import { checkNearlyFull, requestPersistOnce } from "./storage.js";
 import { frameHasInk } from "../editor/doc.js";
 import { getSettings } from "./settings.js";
 import { writeRescue, clearRescue } from "./rescue.js";
+import { announceSaved } from "./channel.js";
 
 const STROKE_DELAY = 250;
 const MAX_INTERVAL = 2000;
@@ -28,20 +33,25 @@ export class Autosaver {
   /**
    * activeStroke(): the gesture in progress ({ frame, before: ImageData }) or null. A frame
    * is never encoded in the middle of a stroke: it is written as it was before the stroke.
+   * onConflict(): another tab stored a newer version; this tab can no longer save.
    */
-  constructor(doc, { onStatus, onSaved, activeStroke } = {}) {
+  constructor(doc, { onStatus, onSaved, onConflict, activeStroke } = {}) {
     this.doc = doc;
     this.onStatus = onStatus || (() => {});
     this.onSaved = onSaved || (() => {});
+    this.onConflict = onConflict || (() => {});
     this.activeStroke = activeStroke || (() => null);
     this.timer = null;
     this.saving = null;
     this.again = false;
     this.failed = false;
+    this.conflict = false; // a newer version is stored: no further writes from this document
+    this.rewriteAll = false; // the stored project is gone: the next write stores every frame
     this.pendingSince = null; // time of the oldest change no write has picked up yet
     this.lastAttemptAt = Date.now();
     this.baseUpdatedAt = doc.project.updatedAt; // the stored version this tab last read or wrote
     this.inflightUpdatedAt = null;
+    this.rescueAt = null;
     this.writing = new Set(); // frames inside the write that is running
     this.state = "saved";
     this.interval = setInterval(() => this.tick(), TICK);
@@ -57,12 +67,12 @@ export class Autosaver {
 
   /** Nothing left to write: no pending change, no write in flight or waiting, and the last write succeeded. */
   get isClean() {
-    return !this.isDirty && !this.saving && !this.failed && this.timer === null;
+    return !this.isDirty && !this.saving && !this.failed && !this.conflict && this.timer === null;
   }
 
   /** Reports the status when it changed: "failed" | "saving" | "saved". */
   refresh(info = {}) {
-    const state = this.failed ? "failed"
+    const state = this.failed || this.conflict ? "failed"
       : this.isDirty || this.saving || this.timer !== null || this.activeStroke() ? "saving" : "saved";
     if (state === this.state && !info.error && !info.recovered) return;
     this.state = state;
@@ -84,7 +94,7 @@ export class Autosaver {
   }
 
   tick() {
-    if (this.saving) return;
+    if (this.saving || this.conflict) return;
     if (this.failed) {
       if (this.isDirty && Date.now() - this.lastAttemptAt >= RETRY_INTERVAL) this.saveNow();
       return;
@@ -101,18 +111,26 @@ export class Autosaver {
       this.again = true;
       return this.saving;
     }
+    if (this.conflict) {
+      // Every further change says it again: from here nothing can be saved.
+      if (this.isDirty) this.onConflict();
+      this.refresh();
+      return Promise.resolve(false);
+    }
     if (!this.isDirty) {
       this.refresh();
       return Promise.resolve(!this.failed);
     }
-    const run = this.write().then(({ ok, info }) => {
+    const run = this.write().then(({ ok, info, retry }) => {
       if (this.saving === run) this.saving = null;
-      if (this.again) {
+      if ((this.again || retry) && !this.conflict) {
         this.again = false;
         this.saveNow();
       }
+      this.again = false;
       this.refresh(info);
       if (ok) this.onSaved();
+      if (this.conflict && info.conflict) this.onConflict();
       return ok;
     });
     this.saving = run;
@@ -129,11 +147,19 @@ export class Autosaver {
     return c;
   }
 
-  /** One write. Never throws: resolves { ok, info } for saveNow() to report. */
+  /** R5: a new project counts as the user's own from its first ink or its second frame (a rename sets it too). */
+  markTouched() {
+    const doc = this.doc;
+    if (doc.project.touched !== false) return;
+    if (doc.frames.length > 1 || doc.frames.some((f) => frameHasInk(f))) doc.project.touched = true;
+  }
+
+  /** One write. Never throws: resolves { ok, info, retry } for saveNow() to report. */
   async write() {
     const doc = this.doc;
     const pendingSince = this.pendingSince;
     this.pendingSince = null;
+    this.markTouched();
     // The dirty flags are cleared at the moment the values are read (CODE-C2). A change made
     // while this write is running sets them again, so the follow-up write picks it up; they
     // are put back if this write fails.
@@ -142,7 +168,8 @@ export class Autosaver {
     const fields = { ...doc.project };
     const frameOrder = doc.frames.map((f) => f.id);
     const deleted = [...doc.deletedIds];
-    const frames = doc.frames.filter((f) => f.dirty);
+    const all = this.rewriteAll;
+    const frames = doc.frames.filter((f) => all || f.dirty);
     const snapshot = [];
     this.writing = new Set(frames);
     try {
@@ -164,8 +191,9 @@ export class Autosaver {
         thumbBlob: await thumbFromBlob(this.source(doc.frames[0]), doc.width, doc.height),
       };
       this.inflightUpdatedAt = project.updatedAt;
-      await db.saveProject(project, records, deleted);
+      await db.saveProject(project, records, deleted, all ? {} : { expectedUpdatedAt: this.baseUpdatedAt });
       this.inflightUpdatedAt = null;
+      this.rewriteAll = false;
       this.baseUpdatedAt = project.updatedAt;
       doc.project.updatedAt = project.updatedAt;
       doc.project.frameOrder = frameOrder;
@@ -177,25 +205,44 @@ export class Autosaver {
       this.failed = false;
       if (this.isDirty) this.pendingSince ??= Date.now();
       else clearRescue(doc.project.id); // everything is in IndexedDB: the unload record is redundant
+      announceSaved(doc.project.id, project.updatedAt);
       if (!getSettings().persistRequested && doc.frames.some((f) => frameHasInk(f))) requestPersistOnce();
       checkNearlyFull();
       return { ok: true, info: { recovered: wasFailed } };
     } catch (err) {
-      console.error("Autosave failed", err);
-      if (err && typeof err === "object") err.handled = true; // W3 is this failure's message
       if (projectWasDirty) doc.projectDirty = true;
       for (const { f, metaWasDirty } of snapshot) if (metaWasDirty) f.metaDirty = true;
       this.inflightUpdatedAt = null;
       this.writing = new Set();
       this.pendingSince = pendingSince ?? Date.now();
-      this.failed = true;
       this.lastAttemptAt = Date.now();
+      if (err?.conflict === "missing") {
+        // The stored project is gone (deleted elsewhere, or cleaned up as never used) while it
+        // is being drawn on here: the drawing wins, the next write stores all of it.
+        this.rewriteAll = true;
+        doc.projectDirty = true;
+        return { ok: false, info: {}, retry: true };
+      }
+      if (err?.conflict === "newer") {
+        if (this.rescueAt !== null && err.storedUpdatedAt >= this.rescueAt && err.storedUpdatedAt <= this.rescueAt + 1) {
+          // "Newer" is this tab's own rescue record, applied by another tab's launch.
+          this.baseUpdatedAt = err.storedUpdatedAt;
+          this.rescueAt = null;
+          return { ok: false, info: {}, retry: true };
+        }
+        this.conflict = true;
+        return { ok: false, info: { conflict: true } };
+      }
+      console.error("Autosave failed", err);
+      if (err && typeof err === "object") err.handled = true; // W3 is this failure's message
+      this.failed = true;
       return { ok: false, info: { error: err } };
     }
   }
 
   /** `pagehide` or `visibilitychange: hidden`: the synchronous record first, then the normal save. */
   leaving() {
+    if (this.conflict) return; // a newer version is stored: boot would refuse this record anyway
     this.rescue();
     this.saveNow();
   }
@@ -204,6 +251,7 @@ export class Autosaver {
   rescue() {
     const doc = this.doc;
     if (!this.isDirty && !this.saving) return null;
+    this.markTouched();
     const frames = doc.frames.filter((f) => f.dirty || this.writing.has(f));
     this.rescueAt = writeRescue(doc, {
       frames, stroke: this.activeStroke(), base: this.baseUpdatedAt, inflight: this.inflightUpdatedAt,
@@ -211,11 +259,18 @@ export class Autosaver {
     return this.rescueAt;
   }
 
-  async dispose() {
+  /** Stops timers and listeners without saving (the document is being replaced or reloaded). */
+  stop() {
     clearInterval(this.interval);
+    clearTimeout(this.timer);
+    this.timer = null;
     document.removeEventListener("visibilitychange", this.onHidden);
     removeEventListener("pagehide", this.onPageHide);
+  }
+
+  async dispose() {
+    this.stop();
     await this.saveNow();
-    if (this.again || this.isDirty) await this.saveNow(); // a change that landed during that write
+    if (this.again || (this.isDirty && !this.failed && !this.conflict)) await this.saveNow(); // a change that landed during that write
   }
 }

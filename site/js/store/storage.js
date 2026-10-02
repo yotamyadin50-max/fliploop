@@ -22,10 +22,6 @@ export async function estimate() {
   }
 }
 
-export function getLastEstimate() {
-  return lastEstimate;
-}
-
 /** W2: checked on load and after saves, at most once per 60 s. Emits "w2" with the ratio. */
 export async function checkNearlyFull({ force = false } = {}) {
   const now = Date.now();
@@ -34,10 +30,6 @@ export async function checkNearlyFull({ force = false } = {}) {
   const e = await estimate();
   emit("w2", e && e.ratio >= W2_RATIO ? e : null);
   return e;
-}
-
-export function isNearlyFull(e = lastEstimate) {
-  return !!e && e.ratio >= W2_RATIO;
 }
 
 /** W2b: adding frames or projects is blocked at 95%. */
