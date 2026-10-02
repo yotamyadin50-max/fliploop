@@ -241,7 +241,10 @@ async function testPng({ frames, paperId = "A4", sheet = 0, title = "FlipLoop se
   canvas.width = 0;
   // The same step the print screen takes: the 300 dpi resolution is written into the file.
   const bytes = withPngDensity(new Uint8Array(await raw.arrayBuffer()));
-  const chunks = [...new Set(pngChunkTypes(bytes))].join(",");
+  const order = [...new Set(pngChunkTypes(bytes))];
+  const chunks = order.join(",");
+  // pHYs right after IHDR and before the pixels; an encoder may add chunks of its own (WebKit writes bKGD).
+  const density = order[0] === "IHDR" && order[1] === "pHYs" && order.indexOf("IDAT") > 1 && order.at(-1) === "IEND";
   const blob = new Blob([bytes], { type: "image/png" });
   const sig = [...new Uint8Array(await blob.slice(0, 8).arrayBuffer())].map((b) => b.toString(16).padStart(2, "0")).join("");
   const bmp = await createImageBitmap(blob);
@@ -273,7 +276,7 @@ async function testPng({ frames, paperId = "A4", sheet = 0, title = "FlipLoop se
   }
   const expectW = paperId === "A4" ? 2480 : 2550;
   const expectH = paperId === "A4" ? 3508 : 3300;
-  return { ok: sig === "89504e470d0a1a0a" && res.width === expectW && res.height === expectH && cardWidthMm !== null && Math.abs(cardWidthMm - 100) <= 0.5 && chunks === "IHDR,pHYs,IDAT,IEND",
+  return { ok: sig === "89504e470d0a1a0a" && res.width === expectW && res.height === expectH && cardWidthMm !== null && Math.abs(cardWidthMm - 100) <= 0.5 && density,
     paperId, pngSignature: sig === "89504e470d0a1a0a", ...res, expected: `${expectW}x${expectH}`, cardWidthMm, chunks, size: blob.size, blob };
 }
 

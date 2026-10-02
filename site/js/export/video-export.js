@@ -4,7 +4,7 @@
 // repeat to at least 3 s. The encoder is warmed up first (Chrome's hardware encoder drops
 // frames during its first seconds of a browser session), and the finished file is checked:
 // a short or empty one is reported so the UI can retry or offer GIF.
-import { playSequence, frameDurationMs, cyclesForMinimum } from "../core/timing.js";
+import { playSequence, cyclesForMinimum } from "../core/timing.js";
 import { ExportCancelled } from "./gif-export.js";
 import { scanMp4, recordingFault } from "./video-check.js";
 
@@ -42,11 +42,13 @@ export class VideoError extends Error {
  */
 export function planVideo(frames, fps, playMode) {
   const seq = playSequence(frames.length, playMode);
-  const durations = seq.map((i) => frameDurationMs(frames[i].hold, fps));
-  const cycleMs = durations.reduce((a, b) => a + b, 0);
-  const cycles = cyclesForMinimum(cycleMs, MIN_MS);
   const ticks = seq.flatMap((i) => Array(frames[i].hold).fill(i));
-  return { seq, durations, cycleMs, cycles, totalMs: cycleMs * cycles, tickMs: 1000 / fps, ticks, samples: ticks.length * cycles };
+  // Lengths come from the whole tick count, not from summed frame lengths: six frames of
+  // 83.33 ms add up to a hair under 500 ms, which used to buy a seventh cycle.
+  const cycleMs = (ticks.length * 1000) / fps;
+  const cycles = cyclesForMinimum(cycleMs, MIN_MS);
+  const samples = ticks.length * cycles;
+  return { seq, cycleMs, cycles, totalMs: (samples * 1000) / fps, tickMs: 1000 / fps, ticks, samples };
 }
 
 /** A capture stream for `canvas` plus push(), which sends the canvas as one video frame. */

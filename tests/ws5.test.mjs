@@ -279,11 +279,18 @@ test("video plan: one sample per animation tick, holds repeat, whole cycles to 3
   assert.equal(a.cycles, 3);
   assert.equal(a.samples, 36);
   assert.ok(Math.abs(a.tickMs - 1000 / 12) < 1e-9);
-  assert.ok(Math.abs(a.totalMs - 3000) < 1e-6);
+  assert.equal(a.totalMs, 3000);
   const b = planVideo(frames([1, 3, 1, 1, 12, 1]), 12, "pingpong");
   assert.deepEqual(b.ticks, [0, 1, 1, 1, 2, 3, ...Array(12).fill(4), 5, ...Array(12).fill(4), 3, 2, 1, 1, 1]);
-  assert.equal(b.ticks.length * b.tickMs, b.cycleMs);
+  assert.equal(b.cycleMs, 3000);
   assert.equal(b.samples, 36);
+  // A cycle of exactly 0.5 s needs 6 cycles, not 7 (six times 83.33 ms sums to 499.99999999999994).
+  const half = planVideo(frames(Array(6).fill(1)), 12, "loop");
+  assert.deepEqual([half.cycleMs, half.cycles, half.samples, half.totalMs], [500, 6, 36, 3000]);
+  for (const fps of [6, 12, 24]) for (let n = 1; n <= 120; n++) {
+    const p = planVideo(frames(Array(n).fill(1)), fps, "loop");
+    assert.equal(p.cycles, Math.max(1, Math.ceil((3 * fps) / n)), `${n} frames at ${fps} fps`);
+  }
   const c = planVideo(frames(Array(120).fill(12)), 6, "loop");
   assert.equal(c.samples, 1440);
   assert.equal(Math.round(c.totalMs / 1000), 240);
