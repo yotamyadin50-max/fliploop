@@ -220,6 +220,7 @@
   @media (max-width: 359px) {
     .save-status { min-width: 28px; justify-content: center; }
     .save-status--failed { min-width: 44px; } /* in this state it is a control (it leads to the red strip) */
+    .save-status__btn { min-width: 44px; justify-content: center; } /* the button itself is the 44px target, not only its wrapper */
     .save-status > span, .save-status__btn > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   }
   .w2-strip { display: flex; align-items: center; gap: var(--s-8); min-height: 32px; padding: 0 var(--s-16); background: var(--warn-bg); color: var(--warn-text); font-size: var(--fs-caption); font-weight: 500; flex: 0 0 auto; }
