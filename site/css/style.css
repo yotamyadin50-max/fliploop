@@ -958,6 +958,10 @@
 /* The one shared pair (Part B): Gallery thumbnail to Editor canvas, 300ms. */
 ::view-transition-group(vt-canvas), ::view-transition-old(vt-canvas), ::view-transition-new(vt-canvas) { animation-duration: 300ms; }
 ::view-transition-group(vt-canvas) { animation-timing-function: cubic-bezier(.05, .7, .1, 1); }
+/* While a transition runs, every pointer event goes to the root element, not to the screen
+   under it. The Editor hands such a press to its canvas (app.js, editor.js earlyPointer); for
+   a finger that only works if the browser does not take the gesture for a scroll first. */
+html.vt-editor { touch-action: none; }
 
 #print-root { display: none; }
 @media print {

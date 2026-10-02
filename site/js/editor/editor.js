@@ -85,6 +85,24 @@ export class EditorScreen {
     this.startCoach();
   }
 
+  /**
+   * A press that came while the page transition still ran (app.js). The browser gave it to
+   * the root element, so the canvas never saw it, and a stroke begun in the first 0.3 s after
+   * arriving here was lost. A press inside the canvas ends the transition at once, and if the
+   * canvas really is what lies under the pointer (no toast, tip or sheet), the stroke starts.
+   * Not while the Export overlay is on its way in: that route's screen is the overlay.
+   */
+  earlyPointer(e, transition) {
+    if (this.disposed || !this.doc || !this.input || !this.autosaver || this.exportOpening || this.exportCtl) return;
+    const canvas = this.stage.display;
+    const r = canvas.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom) return;
+    transition.skipTransition();
+    if (document.elementFromPoint(e.clientX, e.clientY) !== canvas) return;
+    this.input.onDown(e); // captures the pointer: its moves and its release go to the canvas
+    this.autosaver.refresh(); // what the canvas's own pointerdown listener does (build())
+  }
+
   // ---------- automatic updates (js/pwa.js) ----------
   /** True while a page reload would lose or cut something short. */
   isBusy() {

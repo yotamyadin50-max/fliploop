@@ -76,6 +76,24 @@ class Router {
     addEventListener("hashchange", () => this.onHistory());
     addEventListener("popstate", () => this.onHistory());
     document.addEventListener("click", (e) => this.onBackClick(e));
+    this.vt = null; // the view transition that is running, if any
+    this.press = null; // the last pointerdown: where and when
+    addEventListener("pointerdown", (e) => this.onPress(e), true);
+  }
+
+  /**
+   * While a view transition runs, the browser sends every pointer event to the root element,
+   * so a press in the first 0.3 s on a new screen reached nothing. The screen that just
+   * arrived may take such a press itself (the Editor's canvas does: the first stroke lands).
+   * The second press of a double click on whatever opened the screen is not handed over:
+   * it would leave a dot on the drawing.
+   */
+  onPress(e) {
+    const last = this.press;
+    this.press = { x: e.clientX, y: e.clientY, t: e.timeStamp };
+    if (!this.vt || e.target !== document.documentElement) return;
+    if (last && e.timeStamp - last.t < 500 && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 24) return;
+    this.current?.screen.earlyPointer?.(e, this.vt);
   }
 
   /** True while a route change is queued or running (a screen may be saving or loading). */
@@ -219,7 +237,16 @@ class Router {
     if (document.startViewTransition && !reducedMotion() && cur && document.visibilityState === "visible") {
       const vt = document.startViewTransition(swap);
       vt.ready.catch(() => {});
-      vt.finished.catch(() => {});
+      // onPress() hands a press made during this transition to the new screen. For a finger
+      // that needs `touch-action: none` on the root while the Editor arrives (style.css).
+      const root = document.documentElement;
+      this.vt = vt;
+      root.classList.toggle("vt-editor", route.name === "editor");
+      vt.finished.catch(() => {}).then(() => {
+        if (this.vt !== vt) return; // a newer transition owns the class now
+        this.vt = null;
+        root.classList.remove("vt-editor");
+      });
       await vt.updateCallbackDone;
     } else {
       await swap();
