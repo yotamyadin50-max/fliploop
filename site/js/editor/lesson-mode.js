@@ -141,7 +141,8 @@ export class LessonMode {
 
   /** Names the step that is still missing: Play, or in lesson 9 a hold change first (R15). */
   nudge() {
-    toast(t(this.holdChanged() ? "lessonMode.nudgePlay" : "lessonMode.nudgeHold"), { id: "lesson-nudge" });
+    // owner (contract K3): an Editor instruction must not linger on the next screen.
+    this.nudgeToast = toast(t(this.holdChanged() ? "lessonMode.nudgePlay" : "lessonMode.nudgeHold"), { id: "lesson-nudge", owner: this.ed });
   }
 
   blanks() {
@@ -191,7 +192,7 @@ export class LessonMode {
   }
 
   onBlocked() {
-    toast(t("lessonMode.keyFrame"), { id: "keyframe" });
+    toast(t("lessonMode.keyFrame"), { id: "keyframe", owner: this.ed });
     const next = this.nextBlank(this.ed.currentIndex());
     if (next >= 0) {
       const cell = this.ed.strip.cells[next];
@@ -218,6 +219,8 @@ export class LessonMode {
 
   onPlayStart() {
     clearTimeout(this.autoStop);
+    this.nudgeToast?.close(); // Play was pressed: "press Play" has done its job
+    this.nudgeToast = null;
     const ready = this.allBlanksDone();
     this.armed = !this.isComplete() && ready && this.holdChanged();
     if (this.armed) {
