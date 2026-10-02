@@ -23,6 +23,19 @@ import { unlockedStarters } from "../editor/lesson-mode.js";
 import { createStarterProject } from "../store/special-projects.js";
 import { w1Banner, w2GalleryBanner, showW2b, backupNow, reportFailure, storageStateBanner } from "../ui/warnings.js";
 
+/** The toast closed before its undo finished, so its returnFocus found no card yet (K3): once
+ *  the card is back on screen it takes the focus that was parked on the page heading. */
+function focusRestoredCard(id) {
+  let tries = 0;
+  const timer = setInterval(() => {
+    const link = document.querySelector(`.project-card__open[href="#/editor/${id}"]`);
+    const at = document.activeElement;
+    const parked = !at || at === document.body || at.matches('[data-screen="gallery"] h1');
+    if (link && parked) link.focus({ preventScroll: true });
+    if (link || !parked || ++tries > 20) clearInterval(timer);
+  }, 50);
+}
+
 export function importButton(label, onDone, cls = "btn btn--secondary") {
   const input = h("input", { type: "file", accept: ".json,application/json", class: "sr-only", tabindex: "-1", "aria-hidden": "true" });
   const btn = h("button", { class: cls, type: "button", "aria-label": t("gallery.import.aria"), onclick: () => input.click() }, iconEl("upload"), label);
@@ -333,6 +346,7 @@ export class GalleryScreen {
         try {
           const { asCopy } = await undo();
           if (asCopy) toast(t("delete.restoredAsCopy"));
+          else focusRestoredCard(p.id);
         } catch (err) {
           reportFailure(err);
         }
