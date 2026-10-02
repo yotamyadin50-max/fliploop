@@ -8,7 +8,7 @@ import { strokeToPath } from "../lib/raster.js";
 const BOOK_W = 180, BOOK_H = 108, STAPLE = 36;
 // The flip shadow (fix round R37, DS-02): a 40-unit band, soft on both edges. It was a
 // 144-unit veil with a hard leading edge that sat on the page 78% of the time.
-const BAND = 40, SWEEP_MS = 50;
+const BAND = 40, SWEEP_MS = 45;
 
 function characterFrame(frame, prev, i) {
   // Tuft lags the head by one frame (follow-through).
@@ -81,9 +81,9 @@ export function animateFlipbook(svg, { reduced }) {
     frames[i].style.visibility = "hidden";
     i = next;
     frames[i].style.visibility = "visible";
-    // Every second page turn, and 50 ms: at 60 Hz a sweep on every turn can only be drawn for
-    // one frame (a flash) or two (40% of the time). This way it is a real 3-frame sweep and
-    // the page is clean 70% of the time.
+    // Every second page turn, and 45 ms. A page turn lasts 5 screen frames at 60 Hz, so a sweep
+    // on every turn is either one frame (a flash) or two (40% of the time). On every second
+    // turn it is a real 3-frame sweep, and 45 ms ends before the fourth frame at 50 ms.
     if (sweep && shadow.animate && turns++ % 2 === 0) {
       shadow.animate(
         [{ transform: "translateX(0)", opacity: 1 }, { transform: `translateX(-${BOOK_W - STAPLE + BAND}px)`, opacity: 1 }],

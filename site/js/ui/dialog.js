@@ -60,10 +60,13 @@ export function openSheet({ title, body, anchor = null, side = null, onClose, ki
     h("button", { class: "icon-btn sheet__close", type: "button", "aria-label": t("common.close"), onclick: () => close() }, iconEl("close")),
   );
   dialog.append(header, h("div", { class: "sheet__body" }, body));
-  // A side popover always hands focus back to its toggle (a mouse click may not focus it).
+  // Focus goes back to whatever had it. A side popover always hands it to its toggle, and so
+  // does any sheet whose opener was clicked without taking focus (Safari does not focus a
+  // button on click, so the active element is <body> then).
   const active = document.activeElement;
   const parentSheet = active?.closest?.("dialog.sheet");
-  const returnFocus = side && anchor ? anchor : (parentSheet && returnTargets.get(parentSheet)) || active;
+  const opener = active && active !== document.body ? active : anchor;
+  const returnFocus = side && anchor ? anchor : (parentSheet && returnTargets.get(parentSheet)) || opener;
   returnTargets.set(dialog, returnFocus);
   let closed = false;
   const entry = { close, owner };

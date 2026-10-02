@@ -86,7 +86,8 @@
   @media (min-width: 1024px) { .page { padding: var(--s-48) var(--s-32) var(--s-64); } }
 
   .site-header { display: flex; align-items: center; justify-content: space-between; gap: var(--s-8); min-height: 56px; padding: 0 var(--s-8); max-width: 1120px; width: 100%; margin-inline: auto; }
-  .site-header__nav { display: flex; gap: var(--s-4); margin-inline-start: auto; }
+  /* wraps: at 200% text the two Home links are wider than a phone, and the second one was pushed off screen */
+  .site-header__nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-4); margin-inline-start: auto; }
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; font: 700 1.5625rem/1 var(--font-wordmark); text-decoration: none; padding: var(--s-8); }
   .wordmark[hidden], .nav-link[hidden] { display: none; }
   /* Install link (PWA pass): icon only on narrow phones, so the three Home links stay one line each. */
