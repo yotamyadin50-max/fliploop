@@ -1,6 +1,6 @@
 # Fix round 2026-10 · WS1 · Storage and data safety
 
-**Branch:** `fix/ws1` (cut from `27a84ea` "Fix round base"), 7 commits, not pushed, not merged. **Worktree:** `.worktrees/ws1`.
+**Branch:** `fix/ws1` (cut from `27a84ea` "Fix round base"), not pushed, not merged. **Worktree:** `.worktrees/ws1`.
 **Scripts:** `scratchpad\pw2\fix-ws1\` (`lib.mjs`; `r01` to `r21` = reproduce-then-verify scripts, each with a hard timeout; `r20-shots.mjs` = the screenshots; `smoke.mjs`; outputs in `out\`, screenshots in `shots\`).
 **Browser:** real Chrome 154 through Playwright 1.49.1 (`channel: 'chrome'`, headless), a fresh context per scenario, `serviceWorkers: 'block'`, `locale: 'he-IL'`. Desktop = 1280x800 with real mouse and keyboard. Phone = Pixel 7 profile with real touch events (CDP `Input.dispatchTouchEvent`). Results are read back from IndexedDB and from the frame bitmaps, not from the label.
 **Servers:** the fixed build on `127.0.0.1:9401` from `.worktrees/ws1/site`. The untouched base for the "fail first" runs: a copy of the base `site/` in the scratchpad, on `9411`. Both served by `srv.mjs` (a 30-line Node static server). Python's `http.server` refused connections under Chrome's parallel module loads (ERR_CONNECTION_REFUSED, the app then never started), so I replaced it after the first hour; all results below are from runs that loaded cleanly.
