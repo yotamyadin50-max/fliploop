@@ -17,6 +17,60 @@ import { decodeGif } from "./helpers/gif-decode.mjs";
 const site = join(dirname(fileURLToPath(import.meta.url)), "..", "site");
 const read = (rel) => readFileSync(join(site, rel), "utf8");
 
+// ---------- app shell: one policy in three places, fonts, absolute share image (R49, R50, R51) ----------
+
+const metaCsp = (html) => html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)?.[1];
+
+test("CSP: index.html, 404.html and _headers carry the same policy", () => {
+  const header = read("_headers").match(/^\s*Content-Security-Policy:\s*(.+?)\s*$/m)?.[1];
+  assert.ok(header, "_headers has a Content-Security-Policy line");
+  assert.ok(header.endsWith("; frame-ancestors 'none'"), "the header ends with frame-ancestors");
+  const withoutFraming = header.replace(/; frame-ancestors 'none'$/, "");
+  const index = metaCsp(read("index.html"));
+  const notFound = metaCsp(read("404.html"));
+  assert.equal(index, withoutFraming, "index.html <meta> equals the header minus frame-ancestors");
+  assert.equal(notFound, withoutFraming, "404.html <meta> equals the header minus frame-ancestors");
+  assert.equal(index.includes("frame-ancestors"), false, "a <meta> policy cannot carry frame-ancestors");
+  assert.equal(/unsafe-eval/.test(header), false);
+  assert.match(header, /script-src 'self' 'sha256-[A-Za-z0-9+/=]+';/, "scripts: own files plus one hash, no unsafe-inline");
+  for (const part of ["img-src 'self' blob: data:", "media-src 'self' blob: data:", "https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "worker-src 'self'"]) {
+    assert.ok(header.includes(part), `policy allows ${part}`);
+  }
+  assert.match(read("_headers"), /^\s*X-Frame-Options:\s*DENY\s*$/m);
+});
+
+test("CSP: the hash in the policy is the hash of the inline script in 404.html", () => {
+  const html = read("404.html");
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  assert.equal(scripts.length, 1, "exactly one inline script");
+  assert.equal(/[\r\n]/.test(scripts[0]), false, "one line: a line break would hash differently on Windows and Linux");
+  const hash = `'sha256-${createHash("sha256").update(scripts[0], "utf8").digest("base64")}'`;
+  for (const file of ["404.html", "index.html", "_headers"]) assert.ok(read(file).includes(hash), `${file} lists ${hash}`);
+  assert.equal(/<script(?![^>]*\bsrc=)[^>]*>/.test(read("index.html")), false, "index.html has no inline script");
+  assert.ok(html.includes("data-fliploop-404"), "the marker the service worker looks for");
+  assert.equal(/(?:href|src)="(?!\.\/"|assets\/favicon\.svg")[^"]*"/.test(html.replace(/<meta[^>]*>/g, "")), false, "404.html depends on no other file path");
+});
+
+test("index.html: fonts are preloaded, not render-blocking; share image and canonical are absolute", () => {
+  const html = read("index.html");
+  const font = /https:\/\/fonts\.googleapis\.com\/css2[^"]+/;
+  const preload = html.match(new RegExp(`<link rel="preload" as="style" href="(${font.source})" crossorigin>`))?.[1];
+  assert.ok(preload, "the Google Fonts CSS is a preload");
+  const blocking = html.replace(/<noscript>[\s\S]*?<\/noscript>/g, "").match(new RegExp(`<link rel="stylesheet" href="${font.source}"`));
+  assert.equal(blocking, null, "no parser-inserted stylesheet link to the fonts host outside <noscript>");
+  const noscript = html.match(new RegExp(`<noscript><link rel="stylesheet" href="(${font.source})" crossorigin></noscript>`))?.[1];
+  assert.equal(noscript, preload, "the no-JS fallback loads the same URL");
+  assert.match(html, /<script type="module" src="js\/fonts\.js\?v=\d+"><\/script>/);
+  // tools/build-sw-manifest.mjs takes the first fonts href it finds: it must be the preload.
+  assert.equal(html.match(/<link[^>]+href="(https:\/\/fonts\.googleapis\.com\/css2[^"]+)"/)[1], preload);
+  assert.match(html, /<meta property="og:image" content="https:\/\/fliploop-app\.netlify\.app\/assets\/og-image\.png">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/fliploop-app\.netlify\.app\/">/);
+  for (const m of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
+    if (/^https:\/\//.test(m[1])) continue;
+    assert.equal(m[1].startsWith("/"), false, `${m[1]} is relative, so the app also runs under a subpath`);
+  }
+});
+
 // ---------- GIF (EX-04 = CODE-C15) ----------
 
 test("GIF: exactly 256 colours and no white still gives a valid 256-entry file", () => {

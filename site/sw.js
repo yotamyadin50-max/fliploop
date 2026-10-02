@@ -79,17 +79,31 @@ const FONT_CSS = "https://fonts.googleapis.com/css2?family=Fredoka:wght@600&fami
 const SHELL = `fliploop-shell-${VERSION}`;
 const FONTS = "fliploop-fonts"; // survives app updates: font URLs never change content
 const SCOPE = self.registration.scope;
+const SCOPE_PATH = new URL(SCOPE).pathname;
 const INDEX = new URL("./", SCOPE).href;
+const NOT_FOUND = "404.html"; // the Hebrew "page not found" document, relative to the scope
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL);
     // cache: "reload" skips the HTTP cache, so the set is exactly this version's files.
-    await cache.addAll(PRECACHE.map((path) => new Request(new URL(path, SCOPE), { cache: "reload" })));
+    await cache.addAll(PRECACHE.filter((path) => path !== NOT_FOUND).map((path) => new Request(new URL(path, SCOPE), { cache: "reload" })));
+    await cacheNotFound(cache).catch(() => {}); // best effort, see below
     await warmFonts().catch(() => {}); // best effort: offline fonts, never a reason to fail install
   })());
   // No skipWaiting here: a new version waits until the page asks for it (see js/pwa.js).
 });
+
+// 404.html is cached apart from the rest: a host may answer the page's own address with
+// status 404 (it is its error document), and addAll() fails the whole install on any
+// non-2xx answer. The body is checked instead, and stored as a plain 200.
+async function cacheNotFound(cache) {
+  const url = new URL(NOT_FOUND, SCOPE).href;
+  const res = await fetch(new Request(url, { cache: "reload" }));
+  const html = await res.text();
+  if (!html.includes("data-fliploop-404")) return;
+  await cache.put(url, new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } }));
+}
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
@@ -110,9 +124,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
     if (!req.url.startsWith(SCOPE)) return;
-    const isShell = url.pathname.endsWith("/") || url.pathname.endsWith("/index.html");
-    if (req.mode === "navigate" && isShell) event.respondWith(fromShell(INDEX, req));
-    else event.respondWith(fromShell(req, req));
+    // The app shell is the scope root and its index.html, nothing else. Any other folder
+    // address used to get the shell too, whose relative URLs then pointed at files that do
+    // not exist: a blank, unstyled copy of the app.
+    const isShell = url.pathname === SCOPE_PATH || url.pathname === `${SCOPE_PATH}index.html`;
+    if (req.mode !== "navigate") event.respondWith(fromShell(req, req));
+    else if (isShell) event.respondWith(fromShell(INDEX, req));
+    else event.respondWith(fromPage(req));
     return;
   }
   if (url.hostname === "fonts.googleapis.com") event.respondWith(staleWhileRevalidate(event, req));
@@ -126,6 +144,21 @@ async function fromShell(key, req) {
   // A host that redirected at precache time (e.g. "/app" to "/app/") leaves a redirected
   // response, which a navigation refuses: hand back a clean copy.
   return hit.redirected ? new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers: hit.headers }) : hit;
+}
+
+// A page address that is not the shell: a precached file if it is one, else the network.
+// An unknown address (the host says 404) or no network at all gets the Hebrew 404 page.
+async function fromPage(req) {
+  const hit = await caches.match(req, { cacheName: SHELL, ignoreSearch: true });
+  if (hit) return fromShell(req, req);
+  let res = null;
+  try {
+    res = await fetch(req);
+  } catch { /* offline */ }
+  if (res && res.status !== 404) return res;
+  const page = await caches.match(new URL(NOT_FOUND, SCOPE).href, { cacheName: SHELL });
+  if (page) return new Response(page.body, { status: 404, statusText: "Not Found", headers: page.headers });
+  return res || Response.error();
 }
 
 async function staleWhileRevalidate(event, req) {

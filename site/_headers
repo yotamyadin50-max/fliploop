@@ -27,7 +27,18 @@
 /assets/*
   Cache-Control: public, max-age=86400, must-revalidate
 
+# Every response. The Content-Security-Policy is ONE line and is repeated, without
+# frame-ancestors (a <meta> cannot carry it), in index.html and 404.html, so hosts without
+# custom headers (GitHub Pages) run the same policy. Change the three copies together;
+# tests/ws5.test.mjs compares them. What each part is for:
+#   script-src: the app's own modules, plus the SHA-256 of the one inline script in 404.html
+#   style-src: style.css, Google Fonts CSS, and inline styles (the print @page rule, SVG art)
+#   img-src / media-src: blob: for previews, thumbnails and print sheets, data: for imported frames
+#   connect-src: data: and blob: for fetch() of frame data; the two fonts hosts for the service worker
+#   frame-ancestors + X-Frame-Options: the app cannot be framed by another site
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-0dXUpEIjyfU1AAQ4m0ayoZ0nXpY2UQUCuHsjKV94Ssk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self' blob: data: https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'

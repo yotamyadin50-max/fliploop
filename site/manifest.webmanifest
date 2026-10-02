@@ -2,7 +2,7 @@
   "id": "./",
   "name": "FlipLoop",
   "short_name": "FlipLoop",
-  "description": "ציירו פריים אחרי פריים ותראו את הציור זז.",
+  "description": "ציירו דף אחרי דף ותראו את הציור זז.",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./#/",
@@ -21,7 +21,7 @@
     { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
-    { "src": "assets/screenshots/narrow-home.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "ציירו כמה פריימים ותראו אותם זזים" },
+    { "src": "assets/screenshots/narrow-home.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "ציירו כמה דפים ותראו אותם זזים" },
     { "src": "assets/screenshots/narrow-editor.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "עורך האנימציה עם רצועת הפריימים" },
     { "src": "assets/screenshots/wide-editor.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "עורך האנימציה במחשב" },
     { "src": "assets/screenshots/wide-home.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "שולחן האור של FlipLoop" }
