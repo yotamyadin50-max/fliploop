@@ -354,3 +354,29 @@ Upstream: `_process/03d-web-designer-palette.md` (spec), `_process/05d-copywrite
 - Seen, not changed: on one first visit the worker was still "installing" after 6 s (a second try took 0.8 s). Probably the Google Fonts warm-up, which the install waits for; cause not confirmed. No effect on updates.
 
 **Revision discipline:** `registerServiceWorker()` has one caller (`app.js`), now passing four callbacks. `screen.mount(params, view)` gained a second argument used by Editor and Print only; other screens ignore it. `toast()`, `dialog.js` and `sw.js` logic are unchanged. `swVersion()` keeps its signature. Nothing was committed, pushed or deployed.
+
+---
+
+## Fix round 2026-10 (audit round: six parallel workstreams, then one integration)
+
+**Trigger:** `_process/12-fix-direction.md` (about 150 audit findings, 52 rulings, 15 contracts between streams). **State:** merged on `main`, local only. NOT pushed, NOT deployed, no Netlify command run. `origin/main`, GitHub Pages and Netlify still serve `a87cb93`.
+
+**Where everything is written down**
+
+| File | What it holds |
+|---|---|
+| `_process/fix-ws1.md` | Storage and data safety: save honesty, unload rescue record, two tabs, failed reads, blocked storage, backup with stamps, import rules, untouched projects |
+| `_process/fix-ws2.md` | Drawing: fill tolerance, canvas size round trip, eraser sizes, Space and mid-stroke keys, onion over layer, pen, pointer timings |
+| `_process/fix-ws3.md` | Lessons and challenge: done rule by added ink, sheet after one pass and only once, lesson 9 and 11, lesson copy, path and stamp layout |
+| `_process/fix-ws4.md` | Frames, strip, playback, toasts, coach marks: drag reorder, delete and undo order, 120 cap, toast rules, focus, lamp values |
+| `_process/fix-ws5.md` | Exports, print, shell, hosting: video warm-up and check, GIF 256 colours, file names, fonts preload, 404 page, Content-Security-Policy |
+| `_process/fix-ws6.md` | Layout, visual drift, accessibility markup, router history rules, all existing UI copy rows |
+| **`_process/13-integration-notes.md`** | Merge log, the 15 contracts as wired and measured, the full regression with numbers, what changed meaning at integration, the 87 new string keys for the Copywriter, open issues, what still needs a real device |
+
+**Integration in one paragraph:** six `--no-ff` merges in the order WS1, WS2, WS4, WS3, WS5, WS6; the only textual conflicts were in the generated `site/js/data/strings.js` (regenerated each time). Glue added by the integrator: `pwa.js` returns when `register()` gives no registration; `PLAY_LEAD_MS` is one exported constant; the Gallery moves focus to a card restored by undo; the failed save status is icon-only with a 44 px target under 360 px; six unused copy rows removed. `?v=10`; `sw.js` version `6ab07c81f200`, 73 files.
+
+**Regression (all on the merged build, real Chrome, real input, real policy):** unit tests 63 of 63 · full journey 59 of 59 without and 59 of 59 with the real service worker · offline, 404 and fonts 10 of 10 at the root and 10 of 10 under `/fliploop/` · auto-update with two real version bumps 19 of 19 (one reload each, drawing intact, no loop; bumps reverted) · layout 262 of 262 at six sizes · WebKit 18 of 18 · EX-01 6 of 6 fresh launches clean · all 12 lessons reach their stamp · `selfTest({count:12})` and `({count:120})` all ok · 0 console errors, 0 page errors, 0 policy violations. Details and every number: `13-integration-notes.md` section 3.
+
+**Still to do before release (not done here):** the Copywriter pass over the new keys; section 12's plan amendments into `final-site-plan.md`; `audit-report.md`; Build Manager re-check and Launch Gate; then the release checklist of `12-fix-direction.md` section 11 (Netlify build check first, push, verify on Pages, one Netlify deploy).
+
+**Not verified on real hardware:** the list in `13-integration-notes.md` section 7.
