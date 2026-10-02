@@ -155,7 +155,7 @@
 | `editor.status.saving` | שומרים… | One word, plural like the rest of the app (fix round R39) |
 | `editor.status.saved` | נשמר | One word |
 | `editor.status.failed` | לא נשמר | Two short words (R39): "נכשל" was masculine and vague. Under 360px the status shows its icon only; opens W3 |
-| `editor.status.failed.aria` | השמירה נכשלה. פרטים בפס האדום. | |
+| `editor.status.failed.aria` | לא נשמר. פרטים בפס האדום. | Name of the status button in the failed state. Starts with the words the button shows (WCAG 2.5.3); was "השמירה נכשלה. פרטים בפס האדום.", which no longer held the visible "לא נשמר" (Copywriter review, fix round) |
 | `editor.canvas.aria` | דף ציור, פריים {n} מתוך {total} | |
 | `editor.canvas.playing.aria` | מתנגן. לחיצה על הדף עוצרת. | While Playing |
 
@@ -775,7 +775,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | Key | Hebrew | Where / notes |
 |---|---|---|
 | `conflict.title` | הציור הזה השתנה בלשונית אחרת | Dialog title, Editor: another tab saved a newer version of this project (R3). Draft from the fix direction |
-| `conflict.body` | כדי לא לדרוס את הגרסה החדשה, מכאן אי אפשר לשמור. | Dialog body |
+| `conflict.body` | כדי לא למחוק את הגרסה החדשה, אי אפשר לשמור מכאן. אם תטענו אותה, מה שציירתם כאן ייעלם. אפשר להוריד אותו קודם כקובץ. | Dialog body. Says why saving is off, what the primary button costs, and how to keep this tab's drawing first. "למחוק", not "לדרוס" (a word a young reader knows as "run over") |
 | `conflict.reload` | לטעון את הגרסה החדשה | Primary: reloads the document in place |
 | `conflict.download` | להוריד את מה שיש כאן | Secondary: downloads this tab's drawing as a project file |
 | `storage.readFailed.title` | לא הצלחנו לקרוא את העבודות | Gallery error state and the Home banner when a read fails (R4). Never the empty state |
@@ -784,28 +784,28 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | `editor.loadFailed.title` | לא הצלחנו לפתוח את הציור | Editor: the project could not be read (distinct from "not found") |
 | `w0.title` | אי אפשר לשמור בדפדפן הזה | Fixed banner on Home, Gallery and Settings when the browser blocks storage (R4) |
 | `w0.body` | הדפדפן חוסם את השמירה במכשיר, למשל בגלישה פרטית. מה שתציירו כאן לא יישמר. נסו בחלון רגיל או בדפדפן אחר. | Banner body |
-| `storage.blocked.toast` | הדפדפן חוסם את השמירה במכשיר, אז הפעולה לא בוצעה. | Toast for any action that needs storage while it is blocked (new animation, lesson, challenge, starter, backup, import) |
+| `storage.blocked.toast` | אי אפשר לעשות את זה כאן: הדפדפן חוסם את השמירה במכשיר. | Toast for any action that needs storage while it is blocked (new animation, lesson, challenge, starter, backup, import). Same "אי אפשר ...: reason" shape as `w4.add.disabled`; the W0 banner carries the way out |
 | `storage.failed.toast` | הפעולה לא הצליחה. שום דבר לא נמחק. נסו שוב בעוד רגע. | Toast for a storage error on a browser where storage normally works |
 | `w3.left` | הציור האחרון לא נשמר. | Persistent toast on the next screen when the Editor was left while saving was failing, with `w3.action` |
-| `import.none.one` | הפרויקט הזה כבר כאן. שום דבר לא השתנה. | Toast: the imported file is identical to a project on this device |
-| `import.none.other` | כל הפרויקטים בקובץ כבר כאן. שום דבר לא השתנה. | Toast: a backup with nothing new |
+| `import.none.one` | הפרויקט הזה כבר כאן, אז הוא לא יובא שוב. | Toast: the imported file is identical to a project on this device. Speaks only about projects: the line `import.stamps` can follow it, so "שום דבר לא השתנה" would be false there |
+| `import.none.other` | הפרויקטים שבקובץ כבר כאן, אז הם לא יובאו שוב. | Toast: a backup with no new project. Same reason; no "כל", because a damaged-entry line can follow it |
 | `import.skipped.one` | פרויקט אחד כבר היה כאן ולא יובא שוב | Toast line |
 | `import.skipped.other` | {n} פרויקטים כבר היו כאן ולא יובאו שוב | Toast line |
 | `import.copies.one` | פרויקט אחד כבר היה כאן בגרסה אחרת, אז יובא כעותק | Toast line, backup import |
 | `import.copies.other` | {n} פרויקטים כבר היו כאן בגרסה אחרת, אז יובאו כעותקים | Toast line, backup import |
-| `import.clash.one` | כבר יש כאן פרויקט של אותו שיעור או אתגר, אז הוא יובא כעותק חופשי | Toast line: a lesson or challenge project that clashes with an existing one |
-| `import.clash.other` | {n} פרויקטים של שיעור או אתגר שכבר יש כאן יובאו כעותקים חופשיים | Toast line |
+| `import.clash.one` | כבר יש כאן פרויקט של אותו שיעור או אתגר, אז החדש יובא כעותק חופשי | Toast line: a lesson or challenge project that clashes with an existing one. "החדש", not "הוא", which pointed at the project already here |
+| `import.clash.other` | {n} פרויקטים יובאו כעותקים חופשיים, כי לשיעור או לאתגר שלהם כבר יש כאן פרויקט | Toast line. What happened first, then why |
 | `import.bad.one` | פרויקט אחד בקובץ פגום ולא יובא | Toast line: a backup entry that is not a valid project |
 | `import.bad.other` | {n} פרויקטים בקובץ פגומים ולא יובאו | Toast line |
-| `import.frames.blank.one` | פריים אחד בקובץ לא נקרא ויובא ריק | Toast line: a damaged frame image, or one that is not the project's size |
-| `import.frames.blank.other` | {n} פריימים בקובץ לא נקראו ויובאו ריקים | Toast line |
+| `import.frames.blank.one` | פריים אחד בקובץ פגום ויובא ריק | Toast line: a damaged frame image, or one that is not the project's size. "פגום", as in `import.bad.*`; "לא נקרא" also reads as "is not called" |
+| `import.frames.blank.other` | {n} פריימים בקובץ פגומים ויובאו ריקים | Toast line |
 | `import.stamps` | החותמות שבגיבוי נוספו | Toast line: the backup's lesson and challenge stamps were merged in |
 | `import.partial` | יובאו {n} מתוך {total} פרויקטים. לשאר אין מקום. | Toast before W2b when storage fills up in the middle of a backup import |
-| `import.stopped` | הייבוא נעצר. יובאו {n} מתוך {total} פרויקטים. | Toast when an import stops on an error other than a full storage |
-| `import.error.unreadable.one` | הפריים שבקובץ פגום ולא נקרא. שום דבר לא השתנה. | Import error: no frame image in the file can be read (a file with one frame) |
-| `import.error.unreadable.other` | {n} הפריימים שבקובץ פגומים ולא נקראו. שום דבר לא השתנה. | Same, several frames. The count is the number of damaged frames |
+| `import.stopped` | הייבוא נעצר. יובאו {n} מתוך {total} פרויקטים. נסו שוב בעוד רגע. | Toast when an import stops on an error other than a full storage. Ends with the next step: a second import skips what is already here |
+| `import.error.unreadable.one` | הקובץ פגום: אי אפשר לקרוא את הפריים שבו. שום דבר לא השתנה. | Import error: no frame image in the file can be read (a file with one frame). Opens with "הקובץ", like `import.error.invalid` and `.newer` |
+| `import.error.unreadable.other` | הקובץ פגום: אי אפשר לקרוא את הפריימים שבו. שום דבר לא השתנה. | Same, several frames. The count is not shown: it tells the child nothing, and "{n} הפריימים שבקובץ" read stiffly. The code may keep passing `n` |
 | `gallery.starter.numbered` | {starter} {n} | Title of a repeat starter project, for example "כדור 2" |
-| `delete.restoredAsCopy` | בינתיים נוצר פרויקט חדש לשיעור הזה, אז הישן חזר כעותק חופשי | Toast after undoing the delete of a lesson or challenge project when a new one was made in between |
+| `delete.restoredAsCopy` | בינתיים נוצר פרויקט חדש לאותו שיעור או אתגר, אז הישן חזר כעותק חופשי | Toast after undoing the delete of a lesson or challenge project when a new one was made in between. Names both kinds: "לשיעור הזה" was wrong for a challenge project |
 | `settings.shortcuts.label` | קיצורי מקלדת של אות אחת | Settings, Help card, switch (default on). Draft from the fix direction |
 | `settings.shortcuts.hint` | למשל B לעיפרון ו-N לפריים חדש. רווח, חצים ו-Ctrl+Z פועלים תמיד. | Muted line under the switch |
 | `settings.report.button` | להוריד דוח תקלות | Settings, Help card: saves the local error log as a text file |
@@ -831,7 +831,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 |---|---|---|
 | `lessonMode.nudgeHold` | כל הפריימים צוירו. עכשיו שנו החזקה באחד הפריימים ולחצו על ▶︎ (הפעלה) כדי לסיים. | Lesson 9 only (R15, audit COPY-C-02): the toast when both blanks are drawn and no hold was changed yet, and again when Play is pressed in that state. Copywriter's text, with the Play word per R41 (U+25B6 + U+FE0E, then the word) |
 | `lessonDone.toast` | קיבלתם חותמת על שיעור {n} | Plain toast on the next screen when the child left the Editor while the finished lesson was still playing (R14, J2): the stamp is recorded, no sheet opens. Developer's working draft |
-| `challenge.stamp.toast` | קיבלתם חותמת על האתגר של השבוע | One toast in the Editor at the moment the challenge stamp is first recorded (R20, CH-C-01). Developer's working draft |
+| `challenge.stamp.toast` | קיבלתם חותמת על האתגר | One toast in the Editor at the moment the challenge stamp is first recorded (R20, CH-C-01). No "של השבוע": the stamp can be earned in an older week's project, and then that was untrue |
 | `lessonMode.progress.aria.one` | פריים ריק אחד מתוך {total} צויר | K11: replaces `lessonMode.progress.aria` at 1 (audit COPY-C-12) |
 | `lessonMode.progress.aria.other` | {done} מתוך {total} פריימים ריקים צוירו | K11: same text as the old unsuffixed key; the old row stays until the integrator removes unused keys |
 
@@ -842,7 +842,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | `strip.counter.aria.one` | פריים אחד מתוך 120 | K11: the frame counter's accessible name at 1 frame. Replaces the unsuffixed `strip.counter.aria` (the call is now `tp()`) |
 | `strip.counter.aria.other` | {n} פריימים מתוך 120 | K11: same, from 2 frames up |
 | `toast.frameRestore.full` | אי אפשר להחזיר את הפריים: כבר יש 120 פריימים | R22: toast when the undo of a frame delete would pass 120 frames. Build Manager's draft, taken as written |
-| `toast.frameDeleted.aria` | פריים {n} נמחק. אפשר להחזיר אותו, גם עם Ctrl+Z | A1: what the live region says for the frame-delete toast, so the undo is named. The visible toast stays `toast.frameDeleted`. Working draft |
+| `toast.frameDeleted.aria` | פריים {n} נמחק. אפשר להחזיר אותו, גם עם Ctrl+Z. | A1: what the live region says for the frame-delete toast, so the undo is named. The visible toast stays `toast.frameDeleted`. Two sentences, so it ends with a period like the rest (C-20) |
 | `toast.frameRestored.aria` | פריים {n} חזר למקומו | Live region only, after a deleted frame is restored (toast action or Ctrl+Z). Working draft |
 
 ### 24.5 WS5
@@ -850,8 +850,8 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | Key | Hebrew | Where / notes |
 |---|---|---|
 | `export.video.preparing` | מכינים את ההקלטה… | Export overlay, under the progress bar, for up to about 3 s when "להקליט וידאו" is pressed right after the overlay opens (the encoder warm-up, R46). Also the bar's `aria-valuetext` in that state |
-| `export.video.retrying` | ההקלטה הראשונה יצאה חלקית. מקליטים שוב. | Muted note above the progress bar during the one automatic second attempt (R46) |
-| `export.error.videoShort` | הווידאו יצא חלקי. נסו שוב, או הכינו GIF. | Error state after the automatic second attempt also came out short. Buttons: `export.error.videoEmpty.action` and `export.error.retry` |
+| `export.video.retrying` | ההקלטה הראשונה לא הצליחה. מקליטים שוב. | Muted note above the progress bar during the one automatic second attempt (R46). True for both triggers, a short file and an empty one ("חלקית" was wrong for an empty file) |
+| `export.error.videoShort` | הווידאו לא יצא שלם. נסו שוב, או הכינו GIF. | Error state after the automatic second attempt also came out short. Buttons: `export.error.videoEmpty.action` and `export.error.retry`. "לא שלם" is plainer than "חלקי" |
 | `export.video.length.seconds` | ההקלטה תימשך {s} שניות. | Video card, second line, only when the recording takes 10 s or more (EX-09) |
 | `export.video.length.minutes` | ההקלטה תימשך {time} דקות. | Same line from 60 s; `{time}` is minutes:seconds, for example 4:00 |
 | `export.done.back` | לאפשרויות הייצוא | Tertiary button in the done view, back to the four cards (EX-10) |
@@ -866,7 +866,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | `print.file.png.paper` | {title}-sheet-{nn}-{paper}.png | File name, `{nn}` two digits. Replaces `print.file.png` in the code |
 | `print.file.png.pingpong` | {title}-sheet-{nn}-{paper}-pingpong.png | File name when the return cards are included |
 | `print.confirm.many.title` | להדפיס {sheets} גיליונות? | Dialog before "להדפיס" when there are more than 16 sheets (R47) |
-| `print.confirm.many.body` | זה הרבה נייר, וההכנה יכולה לקחת כמה דקות. כדאי להוריד PDF ולבדוק אותו לפני שמדפיסים. | Body of that dialog. Its primary button reuses `print.action.pdf`, its last button `common.cancel` |
+| `print.confirm.many.body` | זה הרבה נייר, וההכנה יכולה לקחת זמן. כדאי להוריד PDF ולבדוק אותו לפני שמדפיסים. | Body of that dialog. Its primary button reuses `print.action.pdf`, its last button `common.cancel`. "זמן", not "כמה דקות": nobody measured the preparation time, so the text gives no figure |
 | `print.confirm.many.print` | להדפיס בכל זאת | Secondary button of that dialog |
 | `print.error.print` | ההדפסה נכשלה. נסו להוריד PDF. | Error toast when preparing the sheets or `window.print()` fails (CODE-C17) |
 | `print.action.sharePdf` | לשתף PDF | Secondary button on the print screen, only when `navigator.canShare` accepts a PDF file (EX-10) |
@@ -875,7 +875,7 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | `page404.title` | הדף לא נמצא · FlipLoop | Static, written by hand in `site/404.html`: `<title>` (R51, pattern of R43) |
 | `page404.description` | הדף הזה לא נמצא. מכאן אפשר לחזור ל-FlipLoop. | Static, `site/404.html`: `<meta name="description">`. Its `og:title` and `og:description` repeat `meta.og.title` and `meta.og.description` |
 | `page404.h1` | הדף הזה לא נמצא | Static, `site/404.html`: heading |
-| `page404.body` | אולי הכתובת נכתבה עם טעות. הציורים שלכם נשארו שמורים במכשיר. | Static, `site/404.html`: body line |
+| `page404.body` | אולי יש טעות בכתובת. שום דבר לא נמחק. | Static, `site/404.html`: body line. The page cannot check what is saved, so it says only what is always true, in the words of `storage.readFailed.body`; and it does not say who wrote the address. **Changed in the Copywriter review: the same sentence must be typed by hand into `site/404.html` (the `<p>` under the `<h1>`)** |
 | `page404.home` | הביתה | Static, `site/404.html`: the one link, to the app's Home (R40) |
 
 ### Notes
@@ -885,7 +885,10 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 - **Deliberate deviations from the plan's sample strings, each forced by a binding limit or rule:** "לשיעורים" to "למסלול" (7-char Back limit); "לא נשמר" to "נכשל" (one-word status); W3 cut from 3 sentences to 2 (2-line limit); the GIF "הכי נוח" line (superlative); "האתגר השבועי" to "האתגר של השבוע" in the manifest (one name for one thing). The Print Back label is "לציור" (the plan names no label; "לעורך" is jargon for a kid).
 - **For Developer:** `export.error.videoHidden`, `import.error.newer`, `sheet.label.staple` and `sheet.label.cut` are ready if you build those paths; they are not required by the plan.
 - **Fix round 2026-10 (rows changed in place, by the copy audit `_process/audit/08-copy.md` and rulings R38 to R45 of `_process/12-fix-direction.md`):** two of the deviations above are reversed, each for a measured reason. "למסלול" is "לשיעורים" again: the screen it returns to is titled "שיעורים", and 8 characters fit the header at 320px. "נכשל" is "לא נשמר": the one-word form was masculine and vague, and under 360px the status shows its icon only. Undo and Redo are "אחורה" and "קדימה", so "ביטול" has one meaning. New strings of the round are in section 24 (other workstreams) and, for WS6, in their own sections: `home.art.pause.aria`, `home.art.play.aria`, `home.cta.lessons.aria.one`, `home.cta.lessons.aria.other`.
-- **Char checks:** all 52 themes are 16 chars or fewer (longest: "כדור שלג מתגלגל", 15), with no duplicates; all Back labels are 7 or fewer; all three status words are one word; zero em or en dashes in this file (checked by script).
+- **Copywriter review of the fix round (2026-10-03, table in `_process/05e-copywriter-fix-round-review.md`):** all 87 new keys and all 89 changed rows were read against the rulings and the code that shows them. 157 kept, 19 corrected, each for one of four reasons. (1) A line that could be untrue: `challenge.stamp.toast` (an older week's project), `import.none.*` ("nothing changed" beside "stamps added"), `delete.restoredAsCopy` (a challenge is not "this lesson"), `export.video.retrying` (an empty file is not "partial"), `print.confirm.many.body` (a "few minutes" nobody measured), `page404.body` (a static page cannot know what is saved). (2) A data-safety message that did not say what to do next or what a button costs: `conflict.body`, `import.stopped`. (3) Words a young reader stumbles on or misreads: "לדרוס", "הפעולה לא בוצעה", "חלקי", "לא נקרא", the stiff "{n} הפריימים שבקובץ", and the unclear "הוא" and "שכבר יש כאן" in `import.clash.*`. (4) The file's own conventions: `editor.status.failed.aria` now starts with the visible "לא נשמר", and `toast.frameDeleted.aria` ends with a period. **One step for the Developer:** `page404.body` is also typed by hand in `site/404.html`, so the new sentence has to be put there too. The five WS6 rows that differ from the audit's wording stay as they are: the Back names keep one pattern ("label, חזרה ל..."), the onion name keeps its state word because the same string is the announcement for the O key, and the two disabled names are R38's.
+- **Char checks:** all 52 themes are 16 chars or fewer (longest: "כדור שלג מתגלגל", 15), with no duplicates; all Back labels are 8 or fewer (longest: "לשיעורים", 8); the three status texts are "שומרים…", "נשמר" and "לא נשמר" (1 or 2 short words, icon only under 360px); zero em or en dashes in this file (checked by script).
 
 ---
 **בדיקת עברית:** 8/8 items walked, fixed 3 issues: (1) gendered defaults: every masculine-singular imperative from the plan's samples rewritten into plural or infinitive; (2) superlative "הכי נוח" replaced with a concrete line; (3) "שלך" changed to "שלי" to match "העבודות שלי". Kill-table walked row by row: no corporate words, no "מקצה לקצה", no hype. "גם" appears 0 times. No right-pointing arrows in Hebrew text; frame keys are spelled out ("חץ שמאלה").
+
+**בדיקת עברית, סבב התיקונים (2026-10-03):** 8/8 items walked on the 19 corrected strings and on every kept new key. Two kinds of issue fixed, (1) and (2); two checks came out clean, (3) and (4). (1) translated or office Hebrew: "הפעולה לא בוצעה" and "לדרוס" replaced with what a child says ("אי אפשר לעשות את זה כאן", "למחוק"); (2) abstract or passive wording: "יצאה חלקית", "לא נקרא" and "נכתבה עם טעות" became "לא הצליחה", "פגום" and "יש טעות בכתובת"; (3) "גם": counted by script, it now appears in five strings (`print.pingpong`, `settings.motionNote`, `install.lead`, `install.installed`, and `toast.frameDeleted.aria` "גם עם Ctrl+Z"), each before the words it stresses, so the "0 times" above is out of date; (4) gender and number: every new instruction is plural ("נסו", "תטענו", "ציירתם"), every new button is an infinitive, and every `.one` / `.other` pair agrees with its noun. Kill-table walked row by row on the new text: no corporate words, no hype, no "מקצה לקצה". The play glyph in `coach.3` and the two nudges is U+25B6 with U+FE0E, a neutral character that does not flip in RTL.
