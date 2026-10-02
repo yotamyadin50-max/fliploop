@@ -130,7 +130,11 @@ export class GalleryScreen {
     clear(this.body);
     this.body.removeAttribute("aria-busy");
     this.body.removeAttribute("aria-label");
-    if (!projects) return this.renderReadError();
+    if (!projects) {
+      // Blocked storage: the banner above says it all. A read that failed on working storage: its own state.
+      if (!w1) this.renderReadError();
+      return;
+    }
     const unlocked = unlockedStarters();
     if (unlocked.length) {
       this.body.append(h("section", { class: "gallery__section", "aria-labelledby": "starters-h2" },
