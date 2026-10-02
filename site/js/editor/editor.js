@@ -1065,7 +1065,10 @@ export class EditorScreen {
     const p = this.doc.project;
     if (p.kind === "challenge" && !getProgress().challengeWeeks.includes(p.challengeWeek)) {
       const nonEmpty = this.doc.frames.filter((f) => frameHasInk(f)).length;
-      if (nonEmpty >= 2) updateProgress((pr) => { pr.challengeWeeks.push(p.challengeWeek); });
+      if (nonEmpty >= 2) {
+        updateProgress((pr) => { pr.challengeWeeks.push(p.challengeWeek); });
+        toast(t("challenge.stamp.toast")); // once: the week is in the list from here on
+      }
     }
   }
 

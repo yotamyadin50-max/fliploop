@@ -2,14 +2,13 @@
 // Frame: { role: "key" | "blank", strokes: prepared content baked into the bitmap,
 //          solution: what a finished blank holds (used by the example player and starters),
 //          guides: dashed hints on the guide layer, never baked, never exported }.
-// Canvas space is 480 x 360.
+// Canvas space is 480 x 360 (LESSON_SPACE in core/lesson-diff.js).
 import { LESSON_COPY } from "./lesson-copy.js";
 import {
-  INK, RED, GREEN, circle, ellipse, line, poly, petal, rollingBall, jumper, figure,
+  RED, GREEN, circle, ellipse, line, poly, petal, rollingBall, jumper, figure,
 } from "./shapes.js";
 import { characterStrokes, armStrokes } from "./character.js";
 
-const W = 480, H = 360;
 const key = (strokes, extra = {}) => ({ role: "key", strokes, solution: [], guides: [], ...extra });
 const blank = (solution, extra = {}) => ({ role: "blank", strokes: [], solution, guides: [], ...extra });
 const dashed = (s) => ({ ...s, c: "#8A857B", w: 2, dash: true });
@@ -226,8 +225,6 @@ export const LESSONS = [
       i === 0 || i === 3 ? key([...body12(), ...arm12(a)]) : { ...blank(arm12(a)), strokes: body12() }),
   },
 ];
-
-export const LESSON_SIZE = { width: W, height: H };
 
 /** The completed exercise as [{ strokes, hold }] (or the lesson's own two-part example). */
 export function exampleFrames(lesson) {

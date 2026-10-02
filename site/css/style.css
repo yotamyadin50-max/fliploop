@@ -627,23 +627,39 @@
   .lessons__intro { max-width: 60ch; }
   .path { position: relative; display: flex; flex-direction: column; gap: var(--s-24); padding: var(--s-16) 0; }
   .path::before { content: ""; position: absolute; top: 40px; bottom: 40px; inset-inline-start: calc(50% - 1px); border-inline-start: 2px dashed var(--disabled); }
-  .station { position: relative; display: flex; justify-content: center; }
-  /* Offset the 150px link, not the full-width row, so nothing pokes past the viewport. */
-  .station:nth-child(odd) .station__link { transform: translateX(48px); }
-  .station:nth-child(even) .station__link { transform: translateX(-48px); }
-  .station__link { display: flex; flex-direction: column; align-items: center; gap: var(--s-8); text-decoration: none; width: 150px; text-align: center; }
-  .station__circle { position: relative; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--glow); border: 1.5px solid var(--ink); transition: transform var(--t-press); }
+  /* Every station keeps to its own half of the path. Its link starts 8px from the centre line
+     and grows outward (up to 190px), the circle sits 48px off the line as specified, and the
+     name is centred under the circle until it is too wide for that: then it starts at the
+     link's inner edge and runs outward. So no name can reach the dashed line. Odd stations
+     are on the inline-start side (station 1 on the right, the list is RTL). */
+  .station { position: relative; display: flex; }
+  .station:nth-child(odd) { justify-content: flex-end; padding-inline-end: calc(50% + 8px); }
+  .station:nth-child(even) { justify-content: flex-start; padding-inline-start: calc(50% + 8px); }
+  .station__link { flex: 0 1 190px; min-width: 0; display: flex; flex-direction: column; gap: var(--s-8); text-decoration: none; text-align: center; }
+  .station:nth-child(odd) .station__link { align-items: flex-end; }
+  .station:nth-child(even) .station__link { align-items: flex-start; }
+  .station:nth-child(odd) .station__circle { margin-inline-end: 8px; }
+  .station:nth-child(even) .station__circle { margin-inline-start: 8px; }
+  /* 40px = inner edge to circle centre. translateX is physical; this list only renders RTL. */
+  .station:nth-child(odd) :is(.station__name, .pill) { transform: translateX(max(0px, calc(40px - 50%))); }
+  .station:nth-child(even) :is(.station__name, .pill) { transform: translateX(min(0px, calc(50% - 40px))); }
+  .station__circle { position: relative; flex: 0 0 auto; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--glow); border: 1.5px solid var(--ink); transition: transform var(--t-press); }
   .station__link:hover .station__circle { background: var(--glow-hover); }
   .station__link:active .station__circle { transform: scale(.94); }
   .station__num { font: var(--fw-display) var(--fs-h2)/1 var(--font-display); }
   .station__stamp { position: absolute; top: -10px; inset-inline-end: -14px; color: var(--success); background: var(--desk); border-radius: 50%; transform: rotate(-8deg); }
-  .station__name { font-size: 15px; font-weight: 500; line-height: 1.3; font-family: var(--font-ui); }
+  .station__name { max-width: min(100%, 8.5rem); overflow-wrap: anywhere; text-wrap: balance; font-size: .9375rem; font-weight: 500; line-height: 1.3; font-family: var(--font-ui); }
   .station--done .station__circle { border-color: var(--success); }
   .credit { margin-top: var(--s-16); }
   @media (min-width: 1024px) {
     .path { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: var(--s-48); }
     .path::before { display: none; }
-    .station .station__link, .station:nth-child(odd) .station__link, .station:nth-child(even) .station__link { transform: none; }
+    .station:nth-child(n) { justify-content: center; padding-inline: 0; }
+    .station:nth-child(n) .station__link { flex: 0 0 150px; align-items: center; }
+    .station:nth-child(n) .station__circle { margin-inline: 0; }
+    .station:nth-child(n) :is(.station__name, .pill) { transform: none; }
+    /* The path, on desktop: a dashed line from each circle to the next one in its row. */
+    .station:not(:nth-child(4n))::after { content: ""; position: absolute; top: 31px; inset-inline-start: calc(50% + 40px); inline-size: calc(100% - 80px); border-top: 2px dashed var(--disabled); }
   }
   .lesson__number { margin-bottom: -8px; }
   .lesson__done { display: inline-flex; align-items: center; gap: var(--s-8); color: var(--success); font-weight: 500; }
@@ -652,20 +668,32 @@
   .lesson__frames { display: flex; align-items: center; gap: var(--s-8); }
   .dashed-glyph { width: 20px; height: 15px; border: 1.5px dashed var(--disabled); border-radius: 2px; }
   .steps { list-style: decimal; padding-inline-start: var(--s-24); display: flex; flex-direction: column; gap: var(--s-8); margin: var(--s-8) 0 var(--s-16); }
-  .lesson__nav { display: flex; justify-content: space-between; gap: var(--s-8); margin-top: var(--s-24); }
+  /* Previous and next take half the row each, so a long lesson name wraps to two lines, not three. */
+  .lesson__nav { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-8); margin-top: var(--s-24); }
+  .lesson__nav .btn { justify-content: flex-start; gap: 2px; padding-inline: 0; font-size: .9375rem; line-height: 1.3; text-align: start; }
+  .lesson__nav > :last-child { justify-content: flex-end; text-align: end; }
+  /* Desktop: the reading column (31rem: no line over 75 characters) beside the example (R34). */
+  @media (min-width: 1024px) {
+    .page.lesson { display: grid; grid-template-columns: minmax(0, 31rem) minmax(0, 1fr); column-gap: var(--s-48); align-items: start; }
+    .page.lesson > * { grid-column: 1; }
+    .page.lesson > .lesson__section--example { grid-column: 2; grid-row: 1 / span 5; margin-top: 0; }
+    .lesson .btn--block { max-width: 22.5rem; }
+  }
   .mini { display: flex; flex-direction: column; gap: var(--s-8); max-width: 560px; }
   .mini__table { padding: var(--s-16); background: var(--glow); border-radius: var(--r-card); border: 1px solid var(--desk-rim); }
   .mini__canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; background: var(--paper); border-radius: var(--r-canvas); border: 1px solid var(--desk-rim); }
   .mini__strip { display: flex; gap: 8px; height: 48px; padding: 8px; overflow-x: auto; scrollbar-width: none; background: var(--film) var(--holes) repeat-x 0 0 / 12px 6px; border-radius: 4px; }
-  .mini__cell { flex: 0 0 43px; height: 32px; width: 43px; border-radius: 1px; opacity: .7; }
-  .mini__cell.is-current { opacity: 1; outline: 2px solid var(--lamp); }
+  .mini__cell { flex: 0 0 43px; height: 32px; width: 43px; border-radius: 1px; }
+  .mini__cell.is-current { outline: 2px solid var(--lamp); outline-offset: 1px; }
   .mini__controls { display: flex; gap: var(--s-8); align-items: center; justify-content: center; }
 
   .done-sheet { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s-8); }
   .done-sheet__actions { display: flex; flex-direction: column; gap: var(--s-8); width: 100%; margin-top: var(--s-16); align-items: stretch; }
-  .done-sheet__unlock { font-weight: 500; color: var(--success); }
-  .stamp { position: relative; width: 88px; height: 88px; display: grid; place-items: center; border-radius: 50%; border: 3px solid var(--success); color: var(--success); transform: rotate(-8deg); }
-  .stamp__num { position: absolute; bottom: 10px; font-weight: 700; }
+  .done-sheet__unlock { color: var(--ink); } /* a plain line: it is not a link */
+  /* The lesson number is the stamp; the check is a badge on its rim, as on a done station. */
+  .stamp { position: relative; width: 88px; height: 88px; margin-top: var(--s-8); display: grid; place-items: center; border-radius: 50%; border: 3px solid var(--success); color: var(--success); transform: rotate(-8deg); }
+  .stamp__num { font: var(--fw-display) 2.25rem/1 var(--font-display); }
+  .stamp__check { position: absolute; top: -10px; inset-inline-end: -12px; display: grid; place-items: center; border-radius: 50%; background: var(--glow); }
   .stamp--drop { animation: stamp-drop 320ms var(--ease-emph); }
   @keyframes stamp-drop { from { transform: scale(1.3) rotate(0); opacity: 0; } }
 

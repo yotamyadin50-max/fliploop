@@ -88,7 +88,7 @@ export class LessonScreen {
         h("h1", { class: "screen-h1", tabindex: "-1" }, t("lesson.h1", { lessonName: text.title })),
         doneAt ? h("p", { class: "lesson__done" }, iconEl("stamp", { size: 20 }), h("span", { class: "num-mix" }, t("lesson.done.badge", { date: dateDMY(doneAt) }))) : null,
         h("section", { class: "lesson__section" }, h("h2", { class: "h2" }, t("lesson.what.h2")), h("p", {}, t("lesson.what.body", { explanation: text.explanation }))),
-        h("section", { class: "lesson__section" }, h("h2", { class: "h2" }, t("lesson.example.h2")), this.player.el, h("p", { class: "muted small" }, text.caption)),
+        h("section", { class: "lesson__section lesson__section--example" }, h("h2", { class: "h2" }, t("lesson.example.h2")), this.player.el, h("p", { class: "muted small" }, text.caption)),
         h("section", { class: "lesson__section" },
           h("h2", { class: "h2" }, t("lesson.exercise.h2")),
           h("p", { class: "lesson__goal" }, t("lesson.exercise.goal", { goal: text.goal })),
@@ -96,11 +96,12 @@ export class LessonScreen {
           h("ol", { class: "steps" }, text.steps.map((s) => h("li", {}, s))),
           this.cta),
         h("nav", { class: "lesson__nav" },
-          prev ? h("a", { class: "btn btn--tertiary", href: `#/lesson/${n - 1}` }, iconEl("arrowPrev", { cls: "icon--flip-rtl" }), t("lesson.prev", { lessonName: prev })) : h("span"),
-          next ? h("a", { class: "btn btn--tertiary", href: `#/lesson/${n + 1}` }, t("lesson.next", { lessonName: next }), iconEl("arrowNext", { cls: "icon--flip-rtl" })) : h("span"))));
+          prev ? h("a", { class: "btn btn--tertiary", href: `#/lesson/${n - 1}` }, iconEl("arrowPrev", { cls: "icon--flip-rtl", size: 20 }), t("lesson.prev", { lessonName: prev })) : h("span"),
+          next ? h("a", { class: "btn btn--tertiary", href: `#/lesson/${n + 1}` }, t("lesson.next", { lessonName: next }), iconEl("arrowNext", { cls: "icon--flip-rtl", size: 20 })) : h("span"))));
     const existing = await findLessonProject(n).catch(() => null);
     if (this.disposed) return;
-    const key = doneAt ? "lesson.cta.reopen" : existing ? "lesson.cta.resume" : "lesson.cta.start";
+    // The label says what the button will open: an exercise that exists, or a new one.
+    const key = !existing ? "lesson.cta.start" : doneAt ? "lesson.cta.reopen" : "lesson.cta.resume";
     this.cta.replaceChildren(iconEl("pencil"), t(key));
   }
 
@@ -111,6 +112,9 @@ export class LessonScreen {
       if (!existing && (await isFull())) { showW2b(); return; }
       const p = existing || (await openLessonProject(n));
       location.hash = `#/editor/${p.id}`;
+    } catch (err) {
+      // Storage failures are reported once, app-wide (contract K1); nothing more to do here.
+      console.error("Lesson could not be opened", err);
     } finally {
       this.cta.disabled = false;
     }
