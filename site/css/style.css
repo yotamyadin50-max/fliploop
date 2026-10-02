@@ -49,11 +49,13 @@
 
 /* ============ base ============ */
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
+  /* overscroll none: the Editor page does not scroll, so on Android a stray downward drag outside
+     the canvas armed pull-to-refresh and reloaded the page in the middle of a drawing (J1 b). */
+  html { -webkit-text-size-adjust: 100%; overscroll-behavior-y: none; }
   body {
     background: var(--desk); color: var(--ink);
     font: 400 var(--fs-body)/var(--lh-body) var(--font-ui); letter-spacing: 0;
-    min-height: 100dvh; overflow-x: hidden;
+    min-height: 100dvh; overflow-x: hidden; overscroll-behavior-y: none;
   }
   :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
   .film :focus-visible { outline-color: var(--lamp); }
@@ -85,7 +87,7 @@
 
   .site-header { display: flex; align-items: center; justify-content: space-between; gap: var(--s-8); min-height: 56px; padding: 0 var(--s-8); max-width: 1120px; width: 100%; margin-inline: auto; }
   .site-header__nav { display: flex; gap: var(--s-4); margin-inline-start: auto; }
-  .wordmark { font: 700 1.5625rem/1 var(--font-wordmark); text-decoration: none; padding: var(--s-8); }
+  .wordmark { display: inline-flex; align-items: center; min-height: 44px; font: 700 1.5625rem/1 var(--font-wordmark); text-decoration: none; padding: var(--s-8); }
   .wordmark[hidden], .nav-link[hidden] { display: none; }
   /* Install link (PWA pass): icon only on narrow phones, so the three Home links stay one line each. */
   .nav-link { white-space: nowrap; }
@@ -109,7 +111,7 @@
   .btn--secondary:hover { background: var(--glow-hover); }
   .btn--tertiary { min-height: 44px; padding: 0 var(--s-8); text-decoration: underline; color: var(--ink); background: none; }
   .btn--danger { background: var(--error); color: #fff; border: 2px solid var(--error); }
-  .btn--compact { min-height: 40px; padding: 0 var(--s-16); font-size: .9375rem; }
+  .btn--compact { min-height: 44px; padding: 0 var(--s-16); font-size: .9375rem; } /* 44: every tap target (R33) */
   .btn--block { width: 100%; }
   .btn--sheet { min-height: 48px; width: 100%; }
   .btn--hero { width: 100%; }
@@ -118,7 +120,10 @@
   .icon-btn { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: var(--r-control); }
   .icon-btn:hover { background: var(--glow-hover); }
   .icon-btn:active { transform: scale(.94); }
-  .row-actions { display: flex; flex-wrap: wrap; gap: var(--s-8); align-items: center; }
+  /* stretch: buttons in one row share one height, a 48px secondary beside a 56px primary grows (R36) */
+  .row-actions { display: flex; flex-wrap: wrap; gap: var(--s-8); align-items: stretch; }
+  .import-wrap { display: flex; }
+  .import-wrap .btn { flex: 1 1 auto; }
   .chip { display: inline-flex; align-items: center; padding: 2px var(--s-8); border-radius: var(--r-pill); font-size: var(--fs-caption); font-weight: 500; line-height: 1.4; }
   .chip--ink { background: var(--ink); color: var(--glow); }
   .chip--outline { border: 1px solid var(--ink); }
@@ -143,19 +148,28 @@
   /* ---- home ---- */
   .home { gap: 0; padding-top: var(--s-8); }
   .home__text { display: flex; flex-direction: column; gap: var(--s-8); }
-  .home__subtitle { font-size: 1.0625rem; }
+  .home__subtitle { font-size: 1rem; }
   .home__table { margin-top: var(--s-24); }
+  /* The flipbook is a pause / play toggle (R37): the whole art is the button. */
+  .home__table--toggle { position: relative; display: block; width: 100%; border-radius: var(--r-card); }
+  .home__paused { position: absolute; top: 12px; inset-inline-start: 12px; width: 32px; height: 32px; display: none; place-items: center; border-radius: 50%; background: var(--ink); color: var(--glow); }
+  .home__table--toggle.is-paused .home__paused { display: grid; }
   .light-table { width: 100%; height: auto; }
   .home__actions { display: flex; flex-direction: column; gap: var(--s-16); margin-top: var(--s-32); }
   .home__cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-16); }
   /* 360px phones: 8px gutter gives each card 160px, so "האתגר של השבוע" (141px with icon) stays one line */
   @media (max-width: 374px) { .home__cards { gap: var(--s-8); } }
-  .home-card { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 72px; padding: var(--s-8); background: var(--glow); border: 1.5px solid var(--ink); border-radius: var(--r-card); text-decoration: none; transition: background-color 150ms; }
+  /* 12px inside a 16px radius, like the other cards. Under 390px the inline padding stays 8px:
+     "האתגר של השבוע" with its icon is 141px and a 360px phone gives the card 160px. */
+  .home-card { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 72px; padding: 12px; background: var(--glow); border: 1.5px solid var(--ink); border-radius: var(--r-card); text-decoration: none; transition: background-color 150ms; }
+  @media (max-width: 389px) { .home-card { padding-inline: var(--s-8); } }
   .home-card:hover { background: var(--glow-hover); }
   .home-card:active { transform: translateY(1px); }
   .home-card__title { display: flex; align-items: center; gap: var(--s-4); font-weight: 500; }
   .home-card__meta { display: flex; align-items: center; gap: var(--s-4); font-size: .9375rem; }
-  .home-card__meta .icon { color: var(--success); }
+  /* The stamp glyph means "completed" on the Lessons path: Muted at 0/12, Success from the first stamp. */
+  .home-card__meta .icon { color: var(--muted); }
+  .home-card__meta--done .icon { color: var(--success); }
   .home__continue:empty, .home__w1:empty { display: none; }
   .home__w1 { margin-top: var(--s-8); }
   @media (min-width: 1024px) {
@@ -163,6 +177,14 @@
     .home__text { grid-area: text; align-self: end; }
     .home__table { grid-area: table; max-width: 560px; margin: 0; justify-self: center; width: 100%; }
     .home__actions { grid-area: actions; align-self: start; }
+  }
+  /* Landscape phone (R32): the same two columns, so the primary action is on the first screen.
+     Text and actions take the wider column (two cards side by side need about 340px). */
+  @media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px) {
+    .home { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-areas: "text table" "actions table"; column-gap: var(--s-24); align-items: start; padding-top: 0; padding-bottom: var(--s-16); }
+    .home__text { grid-area: text; }
+    .home__table { grid-area: table; margin: 0; align-self: start; }
+    .home__actions { grid-area: actions; margin-top: var(--s-16); }
   }
 
   /* ---- editor shell ---- */
@@ -174,8 +196,14 @@
   .topbar { display: flex; align-items: center; gap: var(--s-4); height: var(--topbar); padding: 0 var(--s-8); flex: 0 0 auto; }
   .topbar > .back, .topbar > .btn, .topbar > .save-status { flex: 0 0 auto; }
   .topbar--plain { max-width: 1120px; width: 100%; margin-inline: auto; }
-  .topbar__title { flex: 1 1 auto; min-width: 0; height: 40px; border: 1px solid transparent; border-radius: 8px; background: transparent; padding: 0 var(--s-8); font: 500 16px/1 var(--font-ui); text-overflow: ellipsis; }
+  .topbar__title { flex: 1 1 auto; min-width: 0; height: 44px; border: 1px solid transparent; border-radius: var(--r-control); background: transparent; padding: 0 var(--s-8); font: 500 16px/1 var(--font-ui); text-overflow: ellipsis; }
   .topbar__title:hover { border-color: var(--desk-rim); }
+  /* From 768px the field is as wide as a name needs (about 28 characters), not the whole bar
+     (it lit up as a 780px input for a 14-character name); status and Export stay at the end. */
+  @media (min-width: 768px) {
+    .topbar__title { flex: 0 1 calc(28ch + 2 * var(--s-8)); }
+    .topbar > .save-status { margin-inline-start: auto; }
+  }
   /* Under 400px Export goes icon-only (its aria-label names it) so the title field gets ~150px. */
   @media (max-width: 399px) {
     .topbar__export { min-width: 44px; padding: 0 var(--s-8); justify-content: center; }
@@ -186,13 +214,23 @@
   .save-status--saved { color: var(--success); }
   .save-status--failed { color: var(--error); cursor: pointer; }
   .save-status:disabled { cursor: default; }
+  /* Under 360px the status is its icon only; the words stay for screen readers (R39). */
+  @media (max-width: 359px) {
+    .save-status { min-width: 28px; justify-content: center; }
+    .save-status--failed { min-width: 44px; } /* in this state it is a control (it leads to the red strip) */
+    .save-status > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
   .w2-strip { display: flex; align-items: center; gap: var(--s-8); min-height: 32px; padding: 0 var(--s-16); background: var(--warn-bg); color: var(--warn-text); font-size: var(--fs-caption); font-weight: 500; flex: 0 0 auto; }
   .w2-strip[hidden], .w3-strip[hidden] { display: none; }
-  .w2-strip__action { margin-inline-start: auto; min-height: 32px; display: inline-flex; align-items: center; padding: 0 var(--s-8); font-weight: 500; }
+  .w2-strip__action { position: relative; margin-inline-start: auto; min-height: 32px; display: inline-flex; align-items: center; padding: 0 var(--s-8); font-weight: 500; }
+  .w2-strip__action::before { content: ""; position: absolute; inset: -6px 0; } /* 44px hit area on a 32px strip */
   .w3-strip { display: flex; align-items: center; gap: var(--s-8); padding-block: var(--s-4); padding-inline: var(--s-16) var(--s-8); background: var(--error); color: #fff; font-size: .875rem; line-height: 1.35; font-weight: 500; flex: 0 0 auto; }
   .w3-strip__text { flex: 1; }
   .goal-strip { display: flex; align-items: center; gap: var(--s-8); min-height: 40px; margin: var(--s-8) var(--s-16) 0; padding: 0 var(--s-8); background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-control); flex: 0 0 auto; }
-  .goal__text { flex: 1; min-width: 0; font-size: .875rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Wraps instead of ending in "…": a cut goal or hint is a lost instruction (narrow phones, large text). */
+  .goal__text { flex: 1; min-width: 0; font-size: .875rem; font-weight: 500; line-height: 1.35; }
+  /* fps numbers follow the text size only up to 20px, so "12" and "24" never touch at 200% text. */
+  .fps-btn { font-size: min(1rem, 20px); }
   .goal__progress { font-size: var(--fs-caption); color: var(--muted); white-space: nowrap; }
   /* "התרגיל" button: opens the lesson steps (sheet on phone, anchored popover 1024-1279). Critic F3. */
   .goal__steps { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: var(--s-4); height: 32px; padding-block: 0; padding-inline: 12px 10px; border: 1.5px solid var(--ink); border-radius: var(--r-pill); background: var(--glow); color: var(--ink); font: 500 .8125rem/1 var(--font-ui); white-space: nowrap; flex: 0 0 auto; }
@@ -236,6 +274,11 @@
   .stage__onion { transition: opacity 200ms var(--ease-enter) 80ms; }
   .stage__lock { position: absolute; top: 6px; inset-inline-start: 6px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: var(--r-pill); background: var(--ink); color: var(--glow); pointer-events: none; }
   .stage__lock[hidden] { display: none; }
+  /* Shared element (Part B, page transitions): the Gallery thumbnail of the card being opened
+     grows into the Editor canvas. Motion only; reduced motion skips view transitions. */
+  @media (prefers-reduced-motion: no-preference) {
+    .stage, .project-card.is-opening .project-card__thumb { view-transition-name: vt-canvas; }
+  }
 
   /* ---- tools ---- */
   .tools { flex: 0 0 auto; padding: 0 var(--s-16); transition: opacity 200ms var(--ease-enter); }
@@ -246,7 +289,7 @@
   .tool-key:active { transform: scale(.94); }
   .tool-key[aria-pressed="true"], .tool-key.is-move { background: var(--ink); color: var(--glow); }
   .tool-key:disabled { color: var(--disabled); cursor: default; transform: none; }
-  .tool-key__label { font-size: 11px; line-height: 1; font-weight: 500; white-space: nowrap; }
+  .tool-key__label { font-size: 13px; line-height: 1; font-weight: 500; white-space: nowrap; } /* 13px: the caption floor (R35) */
   .tool-key--desktop { display: none; }
   .color-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--swatch, #1F1E1B); border: 2px solid var(--ink); box-shadow: inset 0 0 0 2px var(--glow); }
 
@@ -336,67 +379,130 @@
     .tool-key__label { display: none; }
     .tool-key--phone { display: none; }
     .tool-key--desktop { display: flex; }
-    .panel { grid-area: panel; display: flex; flex-direction: column; gap: var(--s-16); padding: var(--s-16); background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); overflow-y: auto; align-self: start; max-height: 100%; }
+    /* The panel is taller than the window at 1024x768 to 1366x768: a thin scrollbar that is
+       always there, and a fade over the last visible line, say that it scrolls (R34). The fade
+       is the panel's last flex item: it sticks to the bottom edge while content is hidden below
+       it and sits under the last control once the panel is scrolled to the end. */
+    .panel { grid-area: panel; display: flex; flex-direction: column; gap: var(--s-16); padding: var(--s-16); background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); overflow-y: auto; align-self: start; max-height: 100%; scrollbar-width: thin; scrollbar-color: var(--disabled) transparent; }
+    .panel:not(:empty)::after { content: ""; flex: 0 0 auto; position: sticky; bottom: 0; height: 40px; margin-top: calc(-1 * var(--s-16)); margin-bottom: calc(-1 * var(--s-16)); background: linear-gradient(to bottom, rgba(255, 252, 244, 0), var(--glow) 75%); pointer-events: none; }
     .topbar { height: 56px; padding: 0 var(--s-16); }
+  }
+  /* Touch devices have no hover, so the rail's tooltips never show: the words go under the
+     icons, as on phones (iPad landscape, J10). */
+  @media (min-width: 1024px) and (hover: none) {
+    .tool-key { height: 56px; }
+    .tool-key__label { display: block; }
   }
   @media (max-height: 640px) and (max-width: 1023px) {
     .tool-key { height: 48px; }
     .tool-key__label { display: none; }
   }
+  /* 320 to 339px wide (R33): 6px side padding gives the seven tool keys 44px each; the playback
+     bar has seven controls too, so the fps segments are 40x44 and Play is the 48px circle. */
+  @media (max-width: 339px) {
+    .tools { padding-inline: 6px; }
+    .playbar { padding-inline: 4px; gap: 2px; }
+    .play-btn { width: 48px; }
+    .fps-btn { width: 40px; }
+  }
   /* Landscape phone (installed app, orientation "any"): the height is the scarce axis, so the
      tool row becomes a compact key grid at the start side and the canvas takes the rest of the
-     row, height-bound. Lessons move the goal strip to a side card at the end side. Strip and
-     playback stay full width below. */
-  @media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px) {
-    .screen--editor { --playbar: 48px; } /* Play is 48 tall, every other control 44 */
+     row, height-bound. Lessons move the goal strip to a side card at the end side. The film
+     strip and the playback controls share one row (R32): about 48px more canvas height.
+     From 320px tall; below that the phone layout scrolls (next block). */
+  @media (orientation: landscape) and (min-height: 320px) and (max-height: 500px) and (max-width: 1023px) {
+    :root { --playbar: 0px; } /* the playback bar adds no height here: anything stacked above the film (toasts) clears the strip only */
+    .screen--editor.editor { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+    .editor > .topbar { grid-area: 1 / 1 / 2 / -1; }
+    .editor > .w2-strip { grid-area: 2 / 1 / 3 / -1; }
+    .editor > .w3-strip { grid-area: 3 / 1 / 4 / -1; }
+    .editor > .editor__body { grid-area: 4 / 1 / 5 / -1; min-width: 0; }
+    .editor > .frames { grid-area: 5 / 1 / 6 / 2; min-width: 0; background: var(--film); padding-bottom: var(--safe-b); }
+    .editor > .playbar { grid-area: 5 / 2 / 6 / -1; min-height: 0; padding: 0 var(--s-8) var(--safe-b); border-top: 0; border-inline-end: 1px solid #2E2A25; justify-content: center; gap: 4px; }
     .editor__body { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "rail canvas"; gap: var(--s-16); padding: var(--s-8) var(--s-16); }
     .editor__canvas { grid-area: canvas; padding: 0; min-width: 0; }
     .tools { grid-area: rail; padding: 0; align-self: center; }
     .tools__row { display: grid; grid-template-columns: repeat(3, 44px); gap: 4px; }
     .tool-key { width: 44px; height: 44px; }
-    .editor--lesson { display: grid; grid-template-columns: minmax(0, 1fr) minmax(168px, 22vw); grid-template-rows: auto auto auto minmax(0, 1fr) auto auto; }
-    .editor--lesson > .topbar { grid-area: 1 / 1 / 2 / -1; }
-    .editor--lesson > .w2-strip { grid-area: 2 / 1 / 3 / -1; }
-    .editor--lesson > .w3-strip { grid-area: 3 / 1 / 4 / -1; }
-    .editor--lesson > .editor__body { grid-area: 4 / 1 / 5 / 2; min-width: 0; }
-    .editor--lesson > .goal-strip { grid-area: 4 / 2 / 5 / 3; }
-    .editor--lesson > .frames { grid-area: 5 / 1 / 6 / -1; }
-    .editor--lesson > .playbar { grid-area: 6 / 1 / 7 / -1; }
+    /* Lesson: a third column for the goal card; the playback controls span it. */
+    .screen--editor.editor--lesson { grid-template-columns: minmax(0, 1fr) auto minmax(168px, 22vw); }
+    .editor--lesson > .editor__body { grid-area: 4 / 1 / 5 / 3; }
+    .editor--lesson > .goal-strip { grid-area: 4 / 3 / 5 / 4; }
     .goal-strip, .goal-strip--hints { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "chip prog" "goal goal" "steps steps" "switch switch"; justify-items: start; align-items: center; align-content: center; column-gap: var(--s-8); row-gap: 2px; align-self: center; max-height: calc(100% - var(--s-16)); overflow-y: auto; margin: var(--s-8) 0; margin-inline-end: var(--s-16); padding: 6px var(--s-8); }
     .goal-strip > .chip { grid-area: chip; }
     .goal-strip > .goal__text { grid-area: goal; }
     .goal-strip > .goal__progress { grid-area: prog; }
     .goal-strip > .goal__steps { grid-area: steps; }
     .goal-strip > .switch { grid-area: switch; }
-    .goal-strip > .goal__text { white-space: normal; overflow: visible; line-height: 1.35; }
   }
   @media (orientation: landscape) and (min-height: 400px) and (max-height: 500px) and (max-width: 1023px) {
     .tools__row { grid-template-columns: repeat(2, 44px); } /* 4 rows fit from 400px tall */
+  }
+  /* Under 320px of height (a desktop window at 300% to 400% zoom, WCAG 1.4.10): the Editor
+     stops being a fixed, clipped screen. It scrolls, and the canvas keeps a drawable size
+     (188px of height: 240x180 for a 4:3 page) instead of shrinking to nothing. */
+  @media (max-height: 319px) and (max-width: 1023px) {
+    .screen--editor { height: auto; overflow: visible; }
+    .editor__canvas { flex: 0 0 auto; height: 188px; }
   }
 
   /* ---- panel groups, swatches, controls ---- */
   .panel-group { display: flex; flex-direction: column; gap: var(--s-8); }
   .panel-title { font-size: 1rem; font-weight: 500; }
+  .panel-group > .segmented { align-self: flex-start; } /* hugs its buttons; it was stretched into a full-width box with dead space */
   .swatches { display: grid; grid-template-columns: repeat(6, 44px); gap: 4px; justify-content: start; }
-  .swatch { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-pill); }
-  .swatch::before { content: ""; width: 32px; height: 32px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px rgba(31,30,27,.25); }
+  .swatch { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-pill); transition: background-color 150ms; }
+  .swatch::before { content: ""; width: 32px; height: 32px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px rgba(31,30,27,.25); transition: transform var(--t-press); }
   .swatch[aria-pressed="true"]::before { box-shadow: 0 0 0 2px var(--glow), 0 0 0 4px var(--ink); }
+  /* White and the lightest tints are 1.02 to 1.05:1 on Glow: a full ring at Ink 45% (K9: js marks
+     every colour whose luminance is above 0.8 with data-light). */
+  .swatch[data-light]::before { box-shadow: inset 0 0 0 1px rgba(31, 30, 27, .45); }
+  .swatch[data-light][aria-pressed="true"]::before { box-shadow: inset 0 0 0 1px rgba(31, 30, 27, .45), 0 0 0 2px var(--glow), 0 0 0 4px var(--ink); }
+  .swatch:active::before { transform: scale(.9); }
   .swatch--recent::after { content: ""; position: absolute; }
   .picker { display: inline-flex; align-items: center; gap: var(--s-8); min-height: 44px; cursor: pointer; font-weight: 500; }
-  .picker__input { width: 44px; height: 44px; border: 1.5px solid var(--ink); border-radius: var(--r-control); padding: 2px; background: var(--glow); cursor: pointer; }
+  /* The native colour well, drawn like the swatches beside it: a 32px disc in a 44px target. */
+  .picker__input { appearance: none; -webkit-appearance: none; width: 44px; height: 44px; border: 0; border-radius: 50%; padding: 6px; background: transparent; cursor: pointer; transition: background-color 150ms; }
+  .picker__input::-webkit-color-swatch-wrapper { padding: 0; }
+  .picker__input::-webkit-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(31, 30, 27, .45); }
+  .picker__input::-moz-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(31, 30, 27, .45); }
   .hint { font-size: var(--fs-caption); color: var(--muted); line-height: 1.5; }
   .segmented { display: inline-flex; border: 1.5px solid var(--ink); border-radius: var(--r-control); overflow: hidden; background: var(--glow); }
-  .segmented__btn { min-width: 64px; min-height: 44px; padding: 0 var(--s-16); font-weight: 500; }
+  .segmented__btn { min-width: 64px; min-height: 44px; padding: 0 var(--s-16); font-weight: 500; transition: background-color 150ms; }
   .segmented__btn + .segmented__btn { border-inline-start: 1.5px solid var(--ink); }
   .segmented__btn[aria-pressed="true"], .segmented__btn[aria-checked="true"] { background: var(--ink); color: var(--glow); }
+  .segmented__btn[aria-pressed="true"]:active, .segmented__btn[aria-checked="true"]:active { background: var(--muted); }
   .segmented--small .segmented__btn { min-width: 44px; padding: 0 var(--s-8); }
   .switch { display: inline-flex; align-items: center; gap: var(--s-8); min-height: 44px; font-weight: 500; }
   .switch__track { width: 40px; height: 24px; border-radius: var(--r-pill); background: var(--desk); border: 1.5px solid var(--ink); position: relative; flex: 0 0 auto; transition: background-color 150ms; }
-  .switch__thumb { position: absolute; top: 2px; inset-inline-start: 2px; width: 17px; height: 17px; border-radius: 50%; background: var(--ink); transition: inset-inline-start 150ms var(--ease-enter); }
+  .switch__thumb { position: absolute; top: 2px; inset-inline-start: 2px; width: 17px; height: 17px; border-radius: 50%; background: var(--ink); transition: inset-inline-start 150ms var(--ease-enter), transform var(--t-press); }
   .switch[aria-checked="true"] .switch__track { background: var(--lamp); }
   .switch[aria-checked="true"] .switch__thumb { inset-inline-start: 18px; }
+  .switch:active .switch__thumb { transform: scale(.82); }
   .switch__label { display: inline-flex; align-items: center; gap: 6px; }
-  .goal-strip .switch { min-height: 38px; font-size: var(--fs-caption); }
+  .goal-strip .switch { position: relative; min-height: 38px; font-size: var(--fs-caption); }
+  .goal-strip .switch::before { content: ""; position: absolute; inset: -3px 0; } /* 44px hit area, the strip stays 38px */
+  /* Hover (every one has a pressed equivalent above; Part B). Only where a pointer can hover,
+     so nothing stays lit after a tap. */
+  @media (hover: hover) {
+    .swatch:hover, .picker__input:hover { background: var(--glow-hover); }
+    .segmented__btn:not([aria-pressed="true"]):not([aria-checked="true"]):hover { background: var(--glow-hover); }
+    .switch:hover .switch__track { background: var(--glow-hover); }
+    .switch[aria-checked="true"]:hover .switch__track { background: var(--lamp-hover); }
+  }
+  /* after the hover rule and as specific, so a press still shows while the pointer is over it */
+  .segmented__btn:not([aria-pressed="true"]):not([aria-checked="true"]):active { background: var(--desk); }
+  .picker__input:active { background: var(--desk); }
+  /* Windows High Contrast (forced colours) paints every background with the system colour: the
+     colours a child chooses from must stay, and "pressed" needs a mark that is not a fill. */
+  @media (forced-colors: active) {
+    .swatch, .shade, .color-dot, .picker__input, .width-opt__dot { forced-color-adjust: none; }
+    .tool-key[aria-pressed="true"], .tool-key.is-move, .segmented__btn[aria-pressed="true"], .segmented__btn[aria-checked="true"],
+    .fps-btn[aria-pressed="true"], .width-opt[aria-pressed="true"], .shades-toggle[aria-expanded="true"] { outline: 3px solid Highlight; outline-offset: -3px; }
+    .swatch[aria-pressed="true"], .shade[aria-pressed="true"] { outline: 3px solid Highlight; outline-offset: 2px; }
+    .switch[aria-checked="true"] .switch__track { background: Highlight; }
+    .switch[aria-checked="true"] .switch__thumb { background: HighlightText; }
+  }
   .onion-count { display: flex; align-items: center; justify-content: space-between; gap: var(--s-8); }
   /* Desktop panel is 208px inside: 6 x 44px swatches cannot fit, so 4 per row keeps the 44px hit area. */
   .panel .swatches { grid-template-columns: repeat(4, 44px); }
@@ -406,11 +512,23 @@
   .colors, .colors__main { display: flex; flex-direction: column; }
   .colors__row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-8); flex-wrap: wrap; margin-top: var(--s-8); }
   .colors--panel { gap: var(--s-8); }
-  .shades-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding-inline: 8px 12px; margin-inline-start: -8px; border-radius: var(--r-control); font-weight: 500; }
+  .shades-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding-inline: 8px 12px; margin-inline-start: -8px; border-radius: var(--r-control); font-weight: 500; transition: background-color 150ms, transform var(--t-press); }
   .shades-toggle:hover { background: var(--glow-hover); }
+  .shades-toggle:active { transform: translateY(1px); }
   .shades-toggle .icon { transition: transform var(--t-state) var(--ease-enter); }
   .shades-toggle[aria-expanded="true"] .icon { transform: rotate(180deg); }
-  .colors--panel .shades-toggle { width: 100%; margin: 0; border: 1.5px solid var(--desk-rim); justify-content: flex-start; }
+  /* Ink border, like the segmented controls: one border colour for every selectable tile (Desk-rim was 1.70:1 on Glow) */
+  .colors--panel .shades-toggle { width: 100%; margin: 0; border: 1.5px solid var(--ink); justify-content: flex-start; }
+  /* Phone colours sheet: one start edge and one end edge for everything. The swatch discs are
+     32px in 44px targets, so the grid is pulled out 6px a side and spread: the first and last
+     discs line up with the sheet title and the shade strips. The strips are seven equal
+     columns across the sheet. The recent chips (24px discs in 44px targets) start at the same edge. */
+  .colors:not(.colors--panel) .swatches { justify-content: space-between; margin-inline: -6px; }
+  .colors:not(.colors--panel) .shades__strip { grid-template-columns: repeat(7, minmax(0, 1fr)); justify-content: stretch; }
+  .colors:not(.colors--panel) .shade { width: auto; }
+  .colors:not(.colors--panel) .recent-row { margin-inline-start: -10px; }
+  /* With the chart open the last colour is already the first chip of "בחרתם לאחרונה". */
+  .colors.is-expanded .swatch--recent { display: none; }
   .colors--panel .shades-toggle .icon { transform: rotate(-90deg); }
   .colors--panel .shades-toggle:dir(ltr) .icon { transform: rotate(90deg); }
   .colors--panel .shades-toggle[aria-expanded="true"] { background: var(--ink); color: var(--glow); border-color: var(--ink); }
@@ -437,16 +555,23 @@
   .shade--base::after { content: ""; position: absolute; bottom: 7px; left: 50%; width: 4px; height: 4px; margin-left: -2px;
     border-radius: 50%; background: var(--glow); box-shadow: 0 0 0 1px rgba(31,30,27,.55); }
   .sheet--shades .shade--base::after { bottom: 6px; }
+  .shade[data-light]::before { box-shadow: inset 0 0 0 1px rgba(31, 30, 27, .45); } /* K9: the lightest tiles get a full ring */
   @media (hover: hover) { .shade:not([aria-pressed="true"]):hover::before { box-shadow: inset 0 0 0 2px var(--glow), inset 0 0 0 3px rgba(31,30,27,.45); } }
+  .shade:not([aria-pressed="true"]):active::before { box-shadow: inset 0 0 0 3px var(--glow), inset 0 0 0 4px rgba(31, 30, 27, .6); } /* pressed: the hover ring, one step heavier */
   /* selected: lifts out of the strip with the same two-tone ring as the base swatches */
   .shade[aria-pressed="true"] { z-index: 1; }
   .shade[aria-pressed="true"]::before { border-radius: 8px; box-shadow: 0 0 0 2px var(--glow), 0 0 0 4px var(--ink); }
+  .shade[data-light][aria-pressed="true"]::before { box-shadow: inset 0 0 0 1px rgba(31, 30, 27, .45), 0 0 0 2px var(--glow), 0 0 0 4px var(--ink); }
   .sheet--shades .shade[aria-pressed="true"]::before { border-radius: 6px; }
   .shade:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; z-index: 2; }
   .sheet.sheet--tall { max-height: calc(100dvh - 16px - var(--safe-t)); transition: max-height 240ms var(--ease-enter); }
   /* desktop popover beside the side panel: 1 + 16 + 7 x 32 + 16 + 1 = 258 (the spec 256 plus the 1px popover border) */
-  .sheet--popover.sheet--shades { width: 258px; max-height: calc(100dvh - 16px); --shade: 32px; --shade-h: 28px; animation: side-in 150ms var(--ease-enter); }
-  .sheet--popover.sheet--shades:dir(ltr) { animation-name: side-in-ltr; }
+  .sheet--popover.sheet--shades { width: 258px; max-height: calc(100dvh - 16px); --shade: 32px; --shade-h: 28px; }
+  /* touch at 1024 and up (iPad landscape): 44px tiles, as on phones. 1 + 16 + 7 x 44 + 16 + 1 = 342 */
+  @media (hover: none) { .sheet--popover.sheet--shades { width: 342px; --shade: 44px; --shade-h: 40px; } }
+  /* a popover placed beside its origin (dialog.js placeBeside) slides in from that side */
+  .sheet--popover[data-from="left"] { animation: side-in 150ms var(--ease-enter); }
+  .sheet--popover[data-from="right"] { animation: side-in-ltr 150ms var(--ease-enter); }
   .sheet--shades .sheet__body { padding: var(--s-8) var(--s-16) var(--s-16); }
   .shades-pop { display: flex; flex-direction: column; gap: var(--s-16); }
   @keyframes side-in { from { opacity: 0; transform: translateX(-8px); } }
@@ -458,20 +583,25 @@
     .colors.is-expanded .shades-panel.is-open .reveal__inner { padding-top: var(--s-8); }
   }
   .width-panel { display: flex; gap: var(--s-8); justify-content: center; }
-  .width-opt { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-8); min-height: 88px; border-radius: var(--r-control); border: 1.5px solid var(--desk-rim); background: var(--glow); font-weight: 500; }
+  .width-opt { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-8); min-height: 88px; border-radius: var(--r-control); border: 1.5px solid var(--ink); background: var(--glow); font-weight: 500; transition: background-color 150ms, transform var(--t-press); }
+  .width-opt:active { transform: scale(.97); }
   .width-opt[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--glow); }
+  @media (hover: hover) { .width-opt:not([aria-pressed="true"]):hover { background: var(--glow-hover); } }
   .width-opt__dot { border-radius: 50%; background: currentColor; }
   .frame-menu, .more-sheet { display: flex; flex-direction: column; gap: var(--s-8); }
   .more-sheet { gap: var(--s-24); }
-  .menu-item { display: flex; align-items: center; gap: var(--s-16); min-height: 48px; padding: 0 var(--s-8); border-radius: var(--r-control); font-weight: 500; text-align: start; }
+  .menu-item { display: flex; align-items: center; gap: var(--s-16); min-height: 48px; padding: 0 var(--s-8); border-radius: var(--r-control); font-weight: 500; text-align: start; transition: background-color 150ms, transform var(--t-press); }
   .menu-item:hover:not(:disabled) { background: var(--glow-hover); }
+  .menu-item:active:not(:disabled) { transform: translateY(1px); }
   .menu-item:disabled { color: var(--disabled); cursor: not-allowed; }
   .menu-item--danger:not(:disabled) { color: var(--error); }
   .menu-hold { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px var(--s-8); padding: var(--s-8); border-top: 1px solid var(--desk-rim); border-bottom: 1px solid var(--desk-rim); }
   .menu-hold__head { display: flex; align-items: center; gap: var(--s-16); font-weight: 500; }
   .menu-hold .hint { grid-column: 1 / -1; }
   .stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--ink); border-radius: var(--r-control); }
-  .stepper__btn { width: 44px; height: 44px; font-size: 1.25rem; font-weight: 500; }
+  .stepper__btn { width: 44px; height: 44px; font-size: 1.25rem; font-weight: 500; border-radius: var(--r-control); transition: background-color 150ms, transform var(--t-press); }
+  .stepper__btn:active:not(:disabled) { transform: scale(.94); }
+  @media (hover: hover) { .stepper__btn:hover:not(:disabled) { background: var(--glow-hover); } }
   .stepper__btn:disabled { color: var(--disabled); cursor: not-allowed; }
   .stepper__value { min-width: 40px; text-align: center; font-weight: 700; }
 
@@ -481,7 +611,8 @@
   .sheet::backdrop { background: rgba(28, 25, 22, .45); }
   .sheet__header { display: flex; align-items: center; gap: var(--s-8); padding-block: var(--s-8) 0; padding-inline: var(--s-16) var(--s-8); position: relative; min-height: 52px; flex: 0 0 auto; }
   .sheet__handle { position: absolute; top: 6px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--desk-rim); }
-  .sheet__title { flex: 1; font-size: 1.125rem; font-weight: 500; padding-top: 6px; }
+  .sheet__title { flex: 1; font-size: var(--fs-h3); font-weight: 500; padding-top: 6px; } /* 20px, on the type scale (R35) */
+  .sheet__title:focus, .sheet:focus { outline: none; } /* opening a sheet moves focus to its title (dialog.js): a reading start, not a control */
   .sheet__close { flex: 0 0 auto; }
   .sheet__body { padding: var(--s-8) var(--s-16) calc(var(--s-24) + var(--safe-b)); overflow-y: auto; }
   .sheet--sheet { position: fixed; inset: auto 0 0 0; margin: 0; width: 100%; max-width: 100%; padding-left: var(--safe-l); padding-right: var(--safe-r); border-radius: var(--r-sheet) var(--r-sheet) 0 0; animation: sheet-in var(--t-sheet) var(--ease-enter); }
@@ -630,6 +761,9 @@
   @keyframes stamp-drop { from { transform: scale(1.3) rotate(0); opacity: 0; } }
 
   /* ---- challenge ---- */
+  /* Desktop: a reading column of about 720px, at the start edge under the Back link (R34).
+     The slate and its one action were 1056px wide with the theme in one corner. */
+  @media (min-width: 1024px) { .challenge > *, .settings > * { max-width: 720px; } }
   .slate { border-radius: var(--r-card); background: var(--film); color: var(--on-film); overflow: hidden; padding-bottom: var(--s-24); }
   .slate__band { height: 28px; background: repeating-linear-gradient(-45deg, var(--lamp) 0 18px, var(--film) 18px 36px); border-bottom: 3px solid var(--film); }
   .slate__theme { font: var(--fw-display) 2.4375rem/1.2 var(--font-display); padding: var(--s-16) var(--s-16) 0; }
@@ -642,22 +776,37 @@
   .stamps-empty { display: flex; align-items: center; gap: var(--s-16); }
 
   /* ---- gallery ---- */
-  .gallery__actions { display: flex; flex-wrap: wrap; gap: var(--s-8); }
-  .gallery__actions > .btn--primary { flex: 1 1 100%; }
-  .gallery__actions > :not(.btn--primary) { flex: 1 1 0; min-width: 0; }
+  /* Phone: the primary on its own row, the two secondaries in equal halves under it. The
+     columns are sized in rem, so with large text the secondaries stack instead of colliding
+     (at 200% text "לייבא קובץ" and "לגבות הכל" overlapped and the icon left the screen). */
+  .gallery__actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); gap: var(--s-8); }
+  .gallery__actions > .btn--primary { grid-column: 1 / -1; }
   .gallery__actions .btn { white-space: nowrap; }
-  .gallery__actions .import-wrap .btn { width: 100%; }
-  @media (min-width: 768px) { .gallery__actions > .btn--primary { flex: 0 0 auto; } .gallery__actions > :not(.btn--primary) { flex: 0 0 auto; } }
+  @media (max-width: 767px) { .gallery__actions .btn--secondary { padding-inline: 12px; } } /* two labels with icons side by side fit a 320px phone */
+  /* From 768px one row, and every button in it takes the height of the tallest (R36). */
+  @media (min-width: 768px) { .gallery__actions { display: flex; flex-wrap: wrap; align-items: stretch; } }
   .gallery__section { display: flex; flex-direction: column; gap: var(--s-16); margin-top: var(--s-16); }
   .gallery__body { display: flex; flex-direction: column; }
   .starters { display: flex; gap: var(--s-16); overflow-x: auto; padding-bottom: 4px; }
-  .starter { flex: 0 0 120px; display: flex; flex-direction: column; gap: 4px; padding: var(--s-8); background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); text-align: center; font-weight: 500; }
+  /* Phone: the row runs to both screen edges, so a card that does not fit peeks past the edge
+     instead of being cut at the 16px gutter; the first card still starts at the gutter. */
+  @media (max-width: 767px) {
+    .starters { margin-inline: calc(-1 * var(--s-16)); padding-inline: var(--s-16); scroll-padding-inline: var(--s-16); scroll-snap-type: x proximity; }
+    .starter { scroll-snap-align: start; }
+  }
+  .starter { flex: 0 0 120px; display: flex; flex-direction: column; gap: 4px; padding: var(--s-8); background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); text-align: center; font-weight: 500; transition: background-color 150ms, transform var(--t-press); }
   .starter:hover { background: var(--glow-hover); }
+  .starter:active { transform: translateY(1px); }
   .starter__art { width: 100%; height: auto; border-radius: 4px; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-16); }
   @media (min-width: 768px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (min-width: 1024px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  .project-card { container-type: inline-size; background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); overflow: hidden; display: flex; flex-direction: column; }
+  .project-card { container-type: inline-size; background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); overflow: hidden; display: flex; flex-direction: column; transition: background-color 150ms, transform var(--t-press); }
+  /* The card is the main object of this screen: it answers to hover and to a press, and it
+     stays lit while its project loads (is-opening, set by the Gallery on click). */
+  @media (hover: hover) { .project-card:has(.project-card__open:hover) { background: var(--glow-hover); } }
+  .project-card:has(.project-card__open:active) { background: var(--glow-hover); transform: translateY(1px); }
+  .project-card.is-opening { background: var(--glow-hover); }
   .project-card--skeleton { min-height: 180px; animation: skeleton-light 1.2s ease-in-out infinite alternate; }
   @keyframes skeleton-light { to { background: var(--glow-hover); } }
   .project-card__open { display: flex; flex-direction: column; gap: var(--s-8); text-decoration: none; }
@@ -665,21 +814,40 @@
   .project-card__thumb { width: calc(100% - 16px); margin-inline: 8px; height: auto; background: var(--paper); border-radius: var(--r-canvas); border: 1px solid var(--desk-rim); aspect-ratio: 4 / 3; object-fit: contain; }
   .project-card__title { padding: 0 var(--s-8); font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .project-card__meta { display: flex; align-items: center; gap: var(--s-8); padding-block: 4px; padding-inline: var(--s-8); margin-top: auto; font-size: var(--fs-caption); }
+  .project-card__meta > span:first-child { white-space: nowrap; } /* "12 פריימים" never breaks into "12" over "פריימים" */
   .project-card__menu { margin-inline-start: auto; }
   @container (min-width: 320px) {
     .project-card__open { flex-direction: row; align-items: center; }
+  }
+  /* Narrow cards (two columns on a phone): count, kind chip and the 44px menu need 206px in one
+     row and the card has 136 to 171. The chip goes under the count and the menu spans both
+     rows, so it is always whole inside the card. Cards with and without a chip stay one height. */
+  @container (max-width: 209px) {
+    .project-card__meta { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-rows: auto auto; column-gap: var(--s-4); row-gap: 0; min-height: 52px; }
+    .project-card__meta > span:first-child { grid-area: 1 / 1; align-self: end; }
+    .project-card__meta > .chip { grid-area: 2 / 1; justify-self: start; align-self: start; }
+    .project-card__meta > span:first-child:nth-last-child(2) { grid-row: 1 / 3; align-self: center; } /* no chip: the count is centred beside the menu */
+    .project-card__menu { grid-area: 1 / 2 / 3 / 3; margin: 0; align-self: center; }
   }
   .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s-16); padding: var(--s-24) 0; }
   .empty__art { width: 100%; max-width: 343px; }
 
   /* ---- settings ---- */
   .settings .card { gap: 12px; }
+  @media (min-width: 768px) { .settings .card > .btn { align-self: flex-start; } } /* a one-action button hugs its label; it was 1022px wide */
   .install__state { margin: 0; }
-  .meter { height: 12px; border-radius: 6px; background: var(--desk-rim); overflow: hidden; }
+  /* The figure is an LTR isolate ("758 KB / 3.0 GB · 0%"); as a shrink-wrapped block it sits at
+     the card's start edge, under the point where the meter starts to fill. */
+  .storage > .num { width: fit-content; }
+  .meter { height: 12px; border-radius: var(--r-pill); background: var(--desk-rim); overflow: hidden; }
   .meter__fill { display: block; height: 100%; background: var(--ink); }
   .meter--warn .meter__fill { background: var(--warn-text); }
   .protected { display: flex; align-items: center; gap: var(--s-8); }
   .about__name { font: 700 var(--fs-h3)/1.2 var(--font-wordmark); }
+
+  /* ---- fix round WS6: token snaps for rules that live in other owners' sections (R35) ----
+     Kept here, after those sections, so that no line of another section is edited. */
+  .toast--warn .toast__icon { border-radius: var(--r-canvas); } /* warn icon: 6px is not on the radius scale */
 
   /* ---- fix round: WS1 additions ---- */
 
@@ -702,6 +870,9 @@
 }
 
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; }
+/* The one shared pair (Part B): Gallery thumbnail to Editor canvas, 300ms. */
+::view-transition-group(vt-canvas), ::view-transition-old(vt-canvas), ::view-transition-new(vt-canvas) { animation-duration: 300ms; }
+::view-transition-group(vt-canvas) { animation-timing-function: cubic-bezier(.05, .7, .1, 1); }
 
 #print-root { display: none; }
 @media print {
