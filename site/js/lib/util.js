@@ -10,10 +10,26 @@ export function uuid() {
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-export const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+
+// Yields go through a MessageChannel, not setTimeout(0): browsers slow timers down to about
+// one per second in a hidden tab, which would stretch a long GIF from seconds to minutes.
+// Created on first use, so importing this module (node tests) opens no port.
+let yieldPort = null;
+const yieldQueue = [];
 
 /** Yields to the event loop so long jobs keep the page responsive. */
-export const yieldToMain = () => new Promise((r) => setTimeout(r, 0));
+export function yieldToMain() {
+  if (typeof MessageChannel !== "function") return new Promise((r) => setTimeout(r, 0));
+  if (!yieldPort) {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => yieldQueue.shift()?.();
+    yieldPort = channel.port2;
+  }
+  return new Promise((resolve) => {
+    yieldQueue.push(resolve);
+    yieldPort.postMessage(0);
+  });
+}
 
 export function reducedMotion() {
   return matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -36,10 +52,26 @@ export function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-/** File-name-safe version of a title (keeps Hebrew). */
+const FILE_NAME_MAX = 60; // characters, counted as the user sees them
+// Device names Windows refuses as a file name, with or without an extension.
+const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\.|$)/i;
+
+/**
+ * File-name-safe version of a title (keeps Hebrew and emoji). The result is a name a browser
+ * saves as given on Windows, macOS, Android and iOS, so the name the app reports is the name
+ * on disk: no path or wildcard characters, no control or bidi-control characters (a bidi
+ * override can disguise an extension), no leading dot (hidden file), no trailing dot or
+ * space, no Windows device name.
+ */
 export function safeFileName(title) {
-  const s = String(title || "FlipLoop").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim();
-  return s.slice(0, 60) || "FlipLoop";
+  const strip = (s) => s.replace(/^[.\s]+/, "").replace(/[.\s]+$/, "");
+  let s = String(title ?? "")
+    .replace(/[‎‏‪-‮⁦-⁩؜﻿]/g, "")
+    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f-\u009f]+/g, " ")
+    .replace(/\s+/g, " ");
+  s = strip([...strip(s)].slice(0, FILE_NAME_MAX).join(""));
+  if (WINDOWS_RESERVED.test(s)) s = `_${s}`;
+  return s || "FlipLoop";
 }
 
 export function formatBytes(bytes) {
@@ -53,10 +85,6 @@ export function formatFileSize(bytes) {
   const kb = Math.round(bytes / 1024);
   if (kb < 1000) return `${Math.max(1, kb)} KB`;
   return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-}
-
-export function formatMB(bytes) {
-  return (bytes / 1024 ** 2).toFixed(bytes < 10 * 1024 ** 2 ? 1 : 0);
 }
 
 export function dateDMY(ts) {
@@ -73,14 +101,6 @@ export function dateISO(ts = Date.now()) {
 export function truncate(s, max) {
   const chars = [...s];
   return chars.length <= max ? s : chars.slice(0, max).join("");
-}
-
-export function debounce(fn, ms) {
-  let id;
-  return (...args) => {
-    clearTimeout(id);
-    id = setTimeout(() => fn(...args), ms);
-  };
 }
 
 export function canvasToBlob(canvas, type = "image/png", quality) {

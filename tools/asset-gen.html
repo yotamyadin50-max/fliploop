@@ -13,13 +13,17 @@
 <script type="module">
   // Renders one asset at the window size; headless Chrome screenshots it.
   // ?type=icon (manifest "any": rounded tile, transparent corners), ?type=maskable (full-bleed Desk,
-  // glyph inside the central 80% safe zone), ?type=apple (full-bleed, iOS rounds it), ?type=og (1200x630), ?type=favicon
+  // glyph inside the central 80% safe zone), ?type=og (1200x630), ?type=favicon,
+  // ?type=apple (180x180 apple-touch-icon: full-bleed Desk, square and fully opaque, with the glyph
+  // as large as in "icon". iOS cuts the corners itself and paints any transparency black, so a
+  // rounded tile with transparent corners shows dark slivers on the home screen.)
   import { lightTableSvg } from "../site/js/screens/home-art.js";
   const type = new URLSearchParams(location.search).get("type") || "icon";
   const root = document.getElementById("root");
+  const rounded = type === "favicon" || type === "icon";
   const glyph = (inset) => `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-      <rect width="100" height="100" fill="#DAD6CC" rx="${type === "favicon" || type === "icon" ? 18 : 0}"/>
+      <rect width="100" height="100" fill="#DAD6CC" rx="${rounded ? 18 : 0}"/>
       <g transform="translate(50 50) scale(${inset}) translate(-50 -50)" fill="none" stroke="#1F1E1B" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="21" y="35" width="62" height="38" rx="3" fill="#F6F3EC" stroke-width="3"/>
         <rect x="18.5" y="32.5" width="62" height="38" rx="3" fill="#FFFFFF" stroke-width="3"/>
@@ -36,7 +40,7 @@
     root.style.background = "#DAD6CC";
     root.innerHTML = `<div style="width:780px">${lightTableSvg()}</div>`;
     // Home light table with the flipbook on frame 4 (arm up), centred on Desk, no text.
-  } else if (type === "favicon" || type === "icon") {
+  } else if (rounded || type === "apple") {
     root.innerHTML = glyph(1.18);
   } else {
     root.innerHTML = glyph(0.8 * 1.18);

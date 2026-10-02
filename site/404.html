@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-fliploop-404>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0dXUpEIjyfU1AAQ4m0ayoZ0nXpY2UQUCuHsjKV94Ssk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self' blob: data: https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>הדף לא נמצא · FlipLoop</title>
+  <meta name="description" content="הדף הזה לא נמצא. מכאן אפשר לחזור ל-FlipLoop.">
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="FlipLoop">
+  <meta property="og:description" content="ציירו כמה דפים ותראו אותם זזים. בלי הרשמה.">
+  <meta property="og:image" content="https://fliploop-app.netlify.app/assets/og-image.png">
+  <meta name="color-scheme" content="only light">
+  <meta name="theme-color" content="#DAD6CC">
+  <link id="icon" rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <!--
+    This page is served for ANY unknown path, at any depth, at a domain root (Netlify) and
+    under a subpath (GitHub Pages: /fliploop/). A relative URL would resolve against the
+    unknown path, so the page carries its own styles and the Home link is set by the one
+    inline script at the end. Without JavaScript the link is "./", right for a wrong
+    address one level deep. The script is one line on purpose: its SHA-256 is listed in the
+    Content-Security-Policy (here, in index.html and in _headers), and a line break inside
+    it would change the hash between a Windows and a Linux checkout. tests/ws5.test.mjs
+    checks the three copies against the script.
+  -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; min-height: 100dvh; display: grid; place-items: center;
+      padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+      background: #DAD6CC; color: #1F1E1B;
+      font: 400 1rem/1.7 "Rubik", "Segoe UI", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
+    }
+    .card {
+      width: 100%; max-width: 420px; padding: 24px 16px; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      background: #FFFCF4; border: 1px solid #C9C4B8; border-radius: 16px;
+    }
+    .wordmark { margin: 0; font-weight: 700; font-size: 1.5625rem; line-height: 1; }
+    h1 { margin: 0; font-size: 1.5625rem; font-weight: 500; line-height: 1.25; }
+    p { margin: 0; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; min-height: 56px; margin-top: 8px; padding: 0 24px;
+      background: #F4B63F; color: #1F1E1B; border: 2px solid #1F1E1B; border-radius: 12px;
+      font-weight: 500; font-size: 1.0625rem; line-height: 1.2; text-decoration: none;
+    }
+    .btn:hover { background: #E3A21F; }
+    .btn:active { transform: translateY(1px); }
+    :focus-visible { outline: 3px solid #1F1E1B; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="wordmark" lang="en" dir="ltr">FlipLoop</p>
+    <h1>הדף הזה לא נמצא</h1>
+    <p>אולי הכתובת נכתבה עם טעות. הציורים שלכם נשארו שמורים במכשיר.</p>
+    <a class="btn" id="home" href="./">הביתה</a>
+  </main>
+  <script>(async()=>{const p=location.pathname;let r=p.endsWith("/404.html")?p.slice(0,-8):location.hostname.endsWith(".github.io")?"/"+p.split("/")[1]+"/":"/";try{const g=await navigator.serviceWorker.getRegistration();if(g)r=new URL(g.scope).pathname}catch{}document.getElementById("home").href=r;document.getElementById("icon").href=r+"assets/favicon.svg"})()</script>
+</body>
+</html>

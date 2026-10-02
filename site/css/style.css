@@ -576,8 +576,10 @@
   @keyframes ring { 0% { opacity: .9; transform: scale(.9); } 100% { opacity: 0; transform: scale(1.25); } }
 
   /* ---- export overlay ---- */
-  .export { max-height: 100dvh; }
   .export__h2 { font: var(--fw-display) var(--fs-h2)/1.25 var(--font-display); }
+  .export__h2:focus { outline: none; } /* focused by script on open, like .screen-h1 */
+  /* One height per row: 48px in the overlay, like every other sheet (R36). */
+  .export .btn--primary { min-height: 48px; }
   .export__content { padding: var(--s-24) var(--s-16) calc(var(--s-24) + var(--safe-b)); overflow-y: auto; }
   .export__cards { display: flex; flex-direction: column; gap: var(--s-16); }
   .export-card { display: flex; flex-direction: column; gap: 4px; padding: var(--s-16); border: 1px solid var(--desk-rim); border-radius: var(--r-card); background: var(--paper); }
@@ -585,28 +587,33 @@
   .export-card__h3 { font-size: var(--fs-h3); font-weight: 500; }
   .export-card__line { margin-bottom: var(--s-16); }
   .export-card .btn { align-self: flex-start; }
+  .export-card__note { margin-top: calc(-1 * var(--s-8)); margin-bottom: var(--s-16); font-size: .9375rem; font-weight: 500; }
   .export-card--disabled .export-card__icon { color: var(--disabled); }
   .radio-group { display: flex; flex-wrap: wrap; gap: 0 var(--s-16); margin-bottom: var(--s-16); }
   .radio-group__legend { font-weight: 500; font-size: .9375rem; margin-bottom: 4px; }
   .radio, .check { display: inline-flex; align-items: center; gap: var(--s-8); min-height: 44px; cursor: pointer; }
   .radio input, .check input { width: 20px; height: 20px; accent-color: var(--ink); }
   .export__progress, .export__done, .export__error { display: flex; flex-direction: column; align-items: center; gap: var(--s-16); text-align: center; }
-  .progress { position: relative; width: 100%; height: 12px; border-radius: 3px; background: var(--film) var(--holes) repeat-x 0 50% / 12px 8px; overflow: hidden; }
+  .progress { position: relative; width: 100%; height: 12px; border-radius: var(--r-canvas); background: var(--film) var(--holes) repeat-x 0 50% / 12px 8px; overflow: hidden; }
   .progress__fill { position: absolute; inset-block: 0; inset-inline-start: 0; width: 0; background: var(--lamp); transition: width 120ms linear; }
   .progress__label { font-weight: 500; }
-  .projector { padding: 8px; background: var(--film); border-radius: 8px; width: 100%; max-width: 360px; }
-  .projector__canvas { width: 100%; height: auto; background: var(--paper); }
+  .projector { padding: 8px; background: var(--film); border-radius: var(--r-control); width: 100%; max-width: 360px; }
+  .projector__canvas { width: 100%; height: auto; background: var(--paper); border-radius: var(--r-canvas); }
   .export__done-title { font: var(--fw-display) var(--fs-h3)/1.3 var(--font-display); }
   .export__preview { width: 100%; max-width: 360px; border: 1px solid var(--desk-rim); border-radius: var(--r-canvas); background: var(--paper); }
+  .export__note:empty { display: none; }
   .export__error { color: var(--ink); }
   .export__error .icon { color: var(--error); }
   @media (max-width: 767px) {
-    .export { position: fixed; inset: 16px 0 0 0; margin: 0; width: 100%; max-width: 100%; padding-left: var(--safe-l); padding-right: var(--safe-r); height: calc(100dvh - 16px); border-radius: var(--r-sheet) var(--r-sheet) 0 0; }
+    .export { position: fixed; inset: 16px 0 0 0; margin: 0; width: 100%; max-width: 100%; max-height: 100dvh; padding-left: var(--safe-l); padding-right: var(--safe-r); height: calc(100dvh - 16px); border-radius: var(--r-sheet) var(--r-sheet) 0 0; }
   }
+  /* From tablet up: a floating 560px dialog. Its height limit (90dvh) comes from .sheet--dialog. */
   @media (min-width: 768px) { .export { width: 560px; } }
 
   /* ---- print preview ---- */
   .print-options { gap: var(--s-16); }
+  /* While an export job runs, the options it reads are off (js/screens/print.js setWorking). */
+  .print-options [aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
   .print-actions { display: flex; flex-direction: column; gap: var(--s-16); }
   .print-actions__item { display: flex; flex-direction: column; gap: 4px; }
   .print-actions .btn { align-self: stretch; }

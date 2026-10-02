@@ -3,14 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>FlipLoop</title>
-  <meta name="description" content="ציירו כמה פריימים ותראו אותם זזים. 12 שיעורי אנימציה, אתגר שבועי, ייצוא ל-GIF, לווידאו ולגיליון הדפסה. בלי הרשמה, והציורים נשמרים רק במכשיר שלכם.">
+  <!-- The same policy as the Content-Security-Policy header in _headers, minus frame-ancestors
+       (a <meta> cannot carry it). Hosts without custom headers (GitHub Pages) get it from here.
+       Change the three copies together (index.html, 404.html, _headers); tests/ws5.test.mjs compares them. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0dXUpEIjyfU1AAQ4m0ayoZ0nXpY2UQUCuHsjKV94Ssk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self' blob: data: https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>FlipLoop · אנימציה בציור, דף אחרי דף</title>
+  <meta name="description" content="ציירו כמה דפים ותראו אותם זזים. 12 שיעורי אנימציה, אתגר שבועי, ייצוא ל-GIF, לווידאו ולגיליון הדפסה. בלי הרשמה, והציורים נשמרים רק במכשיר שלכם.">
   <meta name="color-scheme" content="only light">
   <meta name="theme-color" content="#DAD6CC">
+  <link rel="canonical" href="https://fliploop-app.netlify.app/">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fliploop-app.netlify.app/">
   <meta property="og:title" content="FlipLoop">
-  <meta property="og:description" content="ציירו כמה פריימים ותראו אותם זזים. בלי הרשמה.">
-  <meta property="og:image" content="assets/og-image.png">
+  <meta property="og:description" content="ציירו כמה דפים ותראו אותם זזים. בלי הרשמה.">
+  <meta property="og:image" content="https://fliploop-app.netlify.app/assets/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="שולחן אור ועליו ספרון דפדוף עם דמות קטנה שמנופפת">
@@ -26,8 +32,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;family=Playpen+Sans+Hebrew:wght@700&amp;family=Rubik:wght@400;500;700&amp;display=swap" crossorigin>
+  <!-- Preloaded, not linked as a stylesheet: the fonts host must never hold back the first paint.
+       js/fonts.js turns it into the stylesheet. tools/build-sw-manifest.mjs reads this href. -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;family=Playpen+Sans+Hebrew:wght@700&amp;family=Rubik:wght@400;500;700&amp;display=swap" crossorigin>
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;family=Playpen+Sans+Hebrew:wght@700&amp;family=Rubik:wght@400;500;700&amp;display=swap" crossorigin></noscript>
   <link rel="stylesheet" href="css/style.css?v=9">
+  <script type="module" src="js/fonts.js?v=9"></script>
   <script type="module" src="js/app.js?v=9"></script>
 </head>
 <body>

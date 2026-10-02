@@ -845,6 +845,34 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
+| `export.video.preparing` | מכינים את ההקלטה… | Export overlay, under the progress bar, for up to about 3 s when "להקליט וידאו" is pressed right after the overlay opens (the encoder warm-up, R46). Also the bar's `aria-valuetext` in that state |
+| `export.video.retrying` | ההקלטה הראשונה יצאה חלקית. מקליטים שוב. | Muted note above the progress bar during the one automatic second attempt (R46) |
+| `export.error.videoShort` | הווידאו יצא חלקי. נסו שוב, או הכינו GIF. | Error state after the automatic second attempt also came out short. Buttons: `export.error.videoEmpty.action` and `export.error.retry` |
+| `export.video.length.seconds` | ההקלטה תימשך {s} שניות. | Video card, second line, only when the recording takes 10 s or more (EX-09) |
+| `export.video.length.minutes` | ההקלטה תימשך {time} דקות. | Same line from 60 s; `{time}` is minutes:seconds, for example 4:00 |
+| `export.done.back` | לאפשרויות הייצוא | Tertiary button in the done view, back to the four cards (EX-10) |
+| `export.share.failed` | השיתוף לא הצליח. אפשר להוריד את הקובץ ולשלוח אותו. | Inline note under the done buttons when `navigator.share` fails; not shown when the user closes the share sheet (EX-10) |
+| `export.preview.alt` | תצוגה מקדימה של ה-GIF | `alt` of the GIF preview in the done view (COPY-C-17) |
+| `export.progress.name` | התקדמות הייצוא | Accessible name of the export progress bar (A13 point 1) |
+| `export.file.gif` | {title}.gif | File name, full-size GIF |
+| `export.file.gifHalf` | {title}-half.gif | File name, half-size GIF (EX-08: its own name) |
+| `export.file.video` | {title}.{ext} | File name, video; `{ext}` is mp4 or webm |
+| `print.file.pdf.paper` | {title}-flipbook-{paper}.pdf | File name; `{paper}` is A4 or Letter. Replaces `print.file.pdf` in the code (EX-08) |
+| `print.file.pdf.pingpong` | {title}-flipbook-{paper}-pingpong.pdf | File name when the return cards are included |
+| `print.file.png.paper` | {title}-sheet-{nn}-{paper}.png | File name, `{nn}` two digits. Replaces `print.file.png` in the code |
+| `print.file.png.pingpong` | {title}-sheet-{nn}-{paper}-pingpong.png | File name when the return cards are included |
+| `print.confirm.many.title` | להדפיס {sheets} גיליונות? | Dialog before "להדפיס" when there are more than 16 sheets (R47) |
+| `print.confirm.many.body` | זה הרבה נייר, וההכנה יכולה לקחת כמה דקות. כדאי להוריד PDF ולבדוק אותו לפני שמדפיסים. | Body of that dialog. Its primary button reuses `print.action.pdf`, its last button `common.cancel` |
+| `print.confirm.many.print` | להדפיס בכל זאת | Secondary button of that dialog |
+| `print.error.print` | ההדפסה נכשלה. נסו להוריד PDF. | Error toast when preparing the sheets or `window.print()` fails (CODE-C17) |
+| `print.action.sharePdf` | לשתף PDF | Secondary button on the print screen, only when `navigator.canShare` accepts a PDF file (EX-10) |
+| `print.share.ready` | ה-PDF מוכן. לחצו שוב על "לשתף PDF". | Status line when the PDF took so long to build that the browser no longer accepts the first tap as a share request |
+| `print.share.failed` | השיתוף לא הצליח. אפשר להוריד את ה-PDF ולשלוח אותו. | Error toast when sharing the PDF fails; not shown when the user closes the share sheet |
+| `page404.title` | הדף לא נמצא · FlipLoop | Static, written by hand in `site/404.html`: `<title>` (R51, pattern of R43) |
+| `page404.description` | הדף הזה לא נמצא. מכאן אפשר לחזור ל-FlipLoop. | Static, `site/404.html`: `<meta name="description">`. Its `og:title` and `og:description` repeat `meta.og.title` and `meta.og.description` |
+| `page404.h1` | הדף הזה לא נמצא | Static, `site/404.html`: heading |
+| `page404.body` | אולי הכתובת נכתבה עם טעות. הציורים שלכם נשארו שמורים במכשיר. | Static, `site/404.html`: body line |
+| `page404.home` | הביתה | Static, `site/404.html`: the one link, to the app's Home (R40) |
 
 ### Notes
 
