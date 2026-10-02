@@ -476,6 +476,11 @@ export const STRINGS = {
   "confirm.resize.body": "הציורים יישארו במרכז. מה שיוצא מהשוליים ייחתך, ובצד השני יתווסף שטח ריק.",
   "confirm.resize.ok": "לשנות",
   "confirm.resize.cancel": "ביטול",
+  "strip.counter.aria.one": "פריים אחד מתוך 120",
+  "strip.counter.aria.other": "{n} פריימים מתוך 120",
+  "toast.frameRestore.full": "אי אפשר להחזיר את הפריים: כבר יש 120 פריימים",
+  "toast.frameDeleted.aria": "פריים {n} נמחק. אפשר להחזיר אותו, גם עם Ctrl+Z",
+  "toast.frameRestored.aria": "פריים {n} חזר למקומו",
   "tool.width.s": "דק",
   "tool.width.m": "בינוני",
   "tool.width.l": "עבה"

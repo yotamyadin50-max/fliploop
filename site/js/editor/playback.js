@@ -6,7 +6,8 @@
 //   360   playback starts. 6 and 12 fps: intermittent pull-down, one cell in 0.4 of a
 //         period, then rest in the gate. 24 fps: continuous 1728 px/s. Holds rest the
 //         film hold x period; ping-pong reverses it.
-// First Play ever: lamp-catch dips at 360 and 480 ms, edge print lights left to right.
+// First Play ever: lamp-catch dips at 360 and 480 ms (amber .45 to .28, 40 ms each), edge
+// print lights left to right.
 // Stop (280 ms): film halts with the showing frame in the gate and it becomes current.
 // Reduced motion: no glide, pull-down or flicker; the strip stays still and the Lamp
 // outline steps cell to cell.
@@ -87,12 +88,17 @@ export class Player {
 
   firstPlayFlourish() {
     const { root, strip } = this.ed;
+    if (this.reduced) return this.later(360, () => this.ed.onFirstPlay()); // the line only: no flicker
+    // The lamp catches: the amber glow drops for 40 ms, twice. "glow-catch" switches the
+    // glow's transition off for that moment, so each dip is a clean step down and back.
     const dip = (at) => {
       this.later(at, () => root.classList.add("glow-dip"));
       this.later(at + 40, () => root.classList.remove("glow-dip"));
     };
+    this.later(340, () => root.classList.add("glow-catch"));
     dip(360);
     dip(480);
+    this.later(540, () => root.classList.remove("glow-catch"));
     this.later(360, () => {
       const r = strip.scroller.getBoundingClientRect();
       const edges = strip.cells
@@ -172,7 +178,7 @@ export class Player {
     strip.track.style.transform = "";
     strip.markShowing(null);
     strip.scroller.scrollLeft = showing * CELL;
-    root.classList.remove("is-playing", "glow-dip");
+    root.classList.remove("is-playing", "glow-dip", "glow-catch");
     strip.el.classList.remove("is-playing");
     this.ed.onStop(showing);
   }

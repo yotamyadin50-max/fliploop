@@ -785,6 +785,11 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 
 | Key | Hebrew | Where / notes |
 |---|---|---|
+| `strip.counter.aria.one` | פריים אחד מתוך 120 | K11: the frame counter's accessible name at 1 frame. Replaces the unsuffixed `strip.counter.aria` (the call is now `tp()`) |
+| `strip.counter.aria.other` | {n} פריימים מתוך 120 | K11: same, from 2 frames up |
+| `toast.frameRestore.full` | אי אפשר להחזיר את הפריים: כבר יש 120 פריימים | R22: toast when the undo of a frame delete would pass 120 frames. Build Manager's draft, taken as written |
+| `toast.frameDeleted.aria` | פריים {n} נמחק. אפשר להחזיר אותו, גם עם Ctrl+Z | A1: what the live region says for the frame-delete toast, so the undo is named. The visible toast stays `toast.frameDeleted`. Working draft |
+| `toast.frameRestored.aria` | פריים {n} חזר למקומו | Live region only, after a deleted frame is restored (toast action or Ctrl+Z). Working draft |
 
 ### 24.5 WS5
 
