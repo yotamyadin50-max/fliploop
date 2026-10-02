@@ -36,6 +36,8 @@ export function importButton(label, onDone, cls = "btn btn--secondary") {
 
 export async function runImport(file, onDone) {
   try {
+    // A file that cannot fit is refused before it is read into memory (frames are base64: about 3/4 of the file).
+    if (!(await hasRoomFor(file.size * 0.7))) throw new ImportError("tooBig");
     const { entries, bad, progress } = parseImport(await file.text());
     if (!(await hasRoomFor(estimateImportBytes(entries)))) throw new ImportError("tooBig");
     const summary = await importEntries(entries, { progress });
