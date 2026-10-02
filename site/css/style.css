@@ -262,7 +262,8 @@
   .cell { position: relative; flex: 0 0 var(--cell-w); width: var(--cell-w); height: 100%; scroll-snap-align: center; touch-action: pan-x; border-inline: 0; }
   /* Keyboard focus: an inset ring around the whole cell, so the 72px scroller cannot clip it,
      in On-film, so it never reads as the Lamp "current" outline around the thumbnail. */
-  .cell:focus-visible { outline: 3px solid var(--on-film); outline-offset: -3px; }
+  .cell:focus-visible { outline: 3px solid transparent; outline-offset: -3px; } /* transparent: forced-colours mode still paints it */
+  .cell:focus-visible::before { content: ""; position: absolute; inset: 0; z-index: 3; border: 3px solid var(--on-film); pointer-events: none; }
   .cell__thumb { position: absolute; top: 12px; left: 4px; width: var(--thumb-w); height: var(--thumb-h); background: var(--paper); border-radius: 1px; transition: transform var(--t-press); }
   @media (hover: hover) {
     .cell:not(.cell--add, .is-current):hover .cell__thumb { outline: 1px solid var(--on-film-muted); outline-offset: 1px; }
