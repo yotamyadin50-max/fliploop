@@ -68,7 +68,15 @@ function place() {
   if (!region) return;
   let bottom = "";
   const editor = host ? null : document.querySelector(".screen--editor.editor");
-  if (host) bottom = "calc(var(--s-16) + var(--safe-b))";
+  if (host) {
+    bottom = "calc(var(--s-16) + var(--safe-b))";
+    // A dialog that ends a little above the window's bottom edge (the Export overlay on a
+    // desktop) leaves no room for a toast under it: the toast hung half over the dialog's
+    // edge. It then sits inside the dialog, 8px above that edge. A small dialog with room
+    // under it keeps its toast below, clear of its buttons.
+    const gap = innerHeight - host.getBoundingClientRect().bottom;
+    if (gap > 0 && gap < region.offsetHeight + 24) bottom = `${Math.round(gap + 8)}px`;
+  }
   if (editor) {
     const r = region.getBoundingClientRect();
     const width = Math.min(r.width, 420);

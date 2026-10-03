@@ -210,6 +210,13 @@
   @media (max-width: 399px) {
     .topbar__export { min-width: 44px; padding: 0 var(--s-8); justify-content: center; }
     .topbar__export-label { display: none; }
+    /* A lesson's title is longer than a free one ("שיעור 6: האצה והאטה" was cut at 320px). In a
+       lesson the Back link is its arrow only here (its aria-label names it), and the field gives
+       up 2px of padding a side. Ten of the twelve titles then fit from 320px up; lessons 4 and 5
+       are longer than any phone's bar and keep their ellipsis. */
+    .topbar__title { padding-inline: 6px; }
+    .editor--lesson > .topbar > .back { justify-content: center; padding: 0; }
+    .editor--lesson > .topbar > .back > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   }
   .topbar__title:focus { background: var(--glow); border-color: var(--ink); outline: none; }
   .save-status { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 var(--s-4); font-size: var(--fs-caption); font-weight: 500; color: var(--muted); white-space: nowrap; }
@@ -420,6 +427,10 @@
        it and sits under the last control once the panel is scrolled to the end. */
     .panel { grid-area: panel; display: flex; flex-direction: column; gap: var(--s-16); padding: var(--s-16); background: var(--glow); border: 1px solid var(--desk-rim); border-radius: var(--r-card); overflow-y: auto; align-self: start; max-height: 100%; scrollbar-width: thin; scrollbar-color: var(--disabled) transparent; }
     .panel:not(:empty)::after { content: ""; flex: 0 0 auto; position: sticky; bottom: 0; height: 40px; margin-top: calc(-1 * var(--s-16)); margin-bottom: calc(-1 * var(--s-16)); background: linear-gradient(to bottom, rgba(255, 252, 244, 0), var(--glow) 75%); pointer-events: none; }
+    /* The fade softens the panel's text and background only. Every control is drawn above it:
+       the last visible one is cut by the panel's edge, not washed out (the pressed "1" under
+       the fade looked like a rendering fault at 1280x800). */
+    .panel :is(.swatches, .shades-toggle, .picker, .switch, .segmented, .btn) { position: relative; z-index: 1; }
     .topbar { height: 56px; padding: 0 var(--s-16); }
   }
   /* Touch devices have no hover, so the rail's tooltips never show: the words go under the
