@@ -310,3 +310,116 @@ Also only measured here on one PC (Intel Iris Xe, Chrome 154): EX-01's warm-up l
 Commits on `main` after the six merges: `193997f` (contract glue), `75cb06a` (K3 focus, `?v=10`, manifest), `b2bd595` (status target), and the notes commit.
 
 **Local preview of the merged build:** `node tools/serve-headers.mjs 9410`, then http://127.0.0.1:9410/ (real response headers, Hebrew 404).
+
+## 9. Final polish (2026-10-03)
+
+**Role:** Developer · **Branch:** `main`, local only. Nothing pushed, nothing deployed, no Netlify command.
+**Server:** `node tools/serve-headers.mjs 9410` (real response headers). **Browser:** installed Chrome 154 through Playwright 1.49.1, plus Playwright WebKit for the smoke. **Scripts:** scratchpad `pw2/final-polish/`. Every screenshot named below was opened and looked at.
+
+| Commit | What |
+|---|---|
+| `5336176` | Copy: the Copywriter's 19 strings regenerated, `site/404.html` body sentence by hand |
+| `b735a9d` | Editor: a stroke begun during the arrival transition lands |
+| `512f1de` | Three cosmetics: panel fade, overlay toast, lesson title at 320 px |
+| `9704dcc` | `?v=11`, service worker manifest `411a89230697` |
+
+### 9.1 Copy (item 1)
+
+`node tools/build-strings.mjs`: 560 UI keys, 52 themes, 133 lesson keys. `site/404.html` now reads "אולי יש טעות בכתובת. שום דבר לא נמחק."; the inline script was not touched, the hash test in `tests/ws5.test.mjs` passes. Unit tests 63 of 63. The Copywriter's review file `_process/05e-copywriter-fix-round-review.md` went into the same commit.
+
+The five longer texts at 320x568 (`copy320.mjs`, screenshots `shots/copy-320-*.png`; 9 of 10 checks pass, and the tenth is the script's own count: it expected one toast where the earlier storage toast was still up, and both were inside the screen and not cut):
+
+| Text | How it was raised | Result |
+|---|---|---|
+| `conflict.body` | the Editor's own `showConflict()` | 4 lines, dialog 19..301 px wide and 118..450 px high, both buttons on screen without scrolling, nothing cut |
+| `storage.blocked.toast` | for real: `indexedDB.open` throws, then "אנימציה חדשה" on Home; and over the Editor | 2 lines, inside the screen; over the Editor it ends 8 px above the tool row |
+| `import.stopped` | the app's `toast()` with the real string and all four note lines (the `import.clash.other` line among them) | 8 lines in all, inside the screen, nothing cut |
+| `import.clash.other` | as the one note line under "יובאו 9 פרויקטים" | 3 lines, nothing cut |
+| `delete.restoredAsCopy` | the app's `toast()`, together with a second toast | 2 lines each, both inside the screen |
+
+No layout change was needed. Not done: the older workstream scripts that wait for the old words (Copywriter note 4) were not edited; they are scratch files.
+
+### 9.2 The first stroke after arriving in the Editor (item 2)
+
+**Is it new? No.** The released build (https://fliploop-app.netlify.app) measured the same way: strokes begun 0, 50, 100 and 200 ms after the canvas first appears are lost **12 of 12 on desktop mouse and 12 of 12 on phone touch**; at 300 ms 3 of 3 land on both. `main` before the fix: 8 of 8 lost on desktop, and 8 of 8 on the phone profile (that run already carried the `pointer-events` rule named below, which changes nothing).
+
+**Cause.** While a view transition runs, Chrome gives every pointer event to the root element (the page under the transition is not hit-tested), so the canvas never saw the press. On a phone the browser then took the finger for a scroll and cancelled it. Two things tried and dropped: `::view-transition { pointer-events: none }` changes nothing in Chrome 154 (the press still goes to the root); shortening the pair would only shorten the gap.
+
+**Fix (the 200 ms fade and the 300 ms canvas pair are kept):**
+- `app.js`: one `pointerdown` listener on the window. While a transition runs and the press went to the root, the router hands it to the screen that just arrived (`screen.earlyPointer(e, transition)`).
+- `editor.js earlyPointer()`: if the press is inside the canvas box, the transition is ended at once (`skipTransition()`), the browser is asked what really lies under the pointer, and if it is the canvas, the stroke starts through the normal `DrawingInput.onDown` (pointer capture carries the rest of the stroke). A toast, a tip or a sheet over the canvas keeps the press. Nothing is handed over while the Export overlay is on its way in.
+- `style.css`: `html.vt-editor { touch-action: none }`, set by the router only while the Editor arrives. Without it every finger stroke was cancelled (6 of 6 lost with the rule switched off).
+- The second press of a double click is not handed over (under 500 ms and under 24 px from the press before it). The canvas is up 43 to 107 ms after the first click, so a double click on a Gallery card or on "אנימציה חדשה" would otherwise have left a dot on the drawing.
+
+A press beside the canvas leaves the transition alone. So the only change to the designed motion: the animation ends early when somebody starts to draw during it.
+
+**Measured after the fix** (`arrive.mjs`; "the canvas first appears" is the first animation frame after the canvas entered the page, reported by the page itself; the real delay of each press was measured inside the page: 3 to 223 ms on desktop, 15 to 235 ms on the phone profile; in all 96 trials the browser had sent the press to the root, so the new path is what was tested):
+
+| Arrival | Desktop mouse, at 0 · 50 · 100 · 200 ms | Phone touch (Pixel 7 profile), at 0 · 50 · 100 · 200 ms |
+|---|---|---|
+| Gallery "אנימציה חדשה" (free) | 3/3 · 3/3 · 3/3 · 3/3 | 3/3 · 3/3 · 3/3 · 3/3 |
+| Gallery card (the thumbnail-to-canvas pair) | 3/3 · 3/3 · 3/3 · 3/3 | 3/3 · 3/3 · 3/3 · 3/3 |
+| Lesson 1 start | 3/3 · 3/3 · 3/3 · 3/3 | 3/3 · 3/3 · 3/3 · 3/3 |
+| Challenge start | 3/3 · 3/3 · 3/3 · 3/3 | 3/3 · 3/3 · 3/3 · 3/3 |
+
+**96 of 96**, each a whole stroke (1,170 to 1,183 changed pixels, not a dot), 0 cancelled, 0 console errors. That is 12 of 12 for each of free, lesson and challenge on each input, plus the card arrival.
+
+**Edges** (`early-edge.mjs`, 20 of 20): an early stroke released over the top bar is kept, the status goes back to "נשמר" and IndexedDB holds the same ink · the button let go outside the window: the next move with no button ends the stroke, the next stroke draws · a press beside the canvas: transition keeps running, nothing drawn · arriving on the Export overlay: a press over the canvas area draws nothing · double click on a card 60, 120, 200, 300 ms apart: no mark · phone: a stroke that ends over the strip is kept; a second finger cancels it; a double tap on "אנימציה חדשה" 100, 180, 280 ms apart leaves no mark; a scrolling screen does not get the Editor class · reduced motion (no transition): the stroke at 0 ms lands. The integrator's `probe-vt.mjs` (the pair still runs from a card and from the menu): 7 of 7.
+
+Said so nobody chases it: my first version of the probe sent mouse moves with `button: none`; Chrome then drops the pointer capture one frame later and the stroke ends as a dot. That was the script, not the app (Playwright's own mouse sends `button: left` while a button is down, and the numbers above use that).
+
+Not covered: a press on a button during a transition still reaches nothing, on every screen, as before (only the Editor's canvas takes an early press). WebKit was not measured for this path (no scripted touch there); the handler acts only when the press went to the root element, so a browser that gives the press to the canvas itself is not affected.
+
+### 9.3 Three cosmetics (item 3)
+
+Before and after screenshots: `shots/cos-before-*.png`, `shots/cos-after-*.png` (`cosmetics.mjs`, after: 61 checks pass, run in parts).
+
+| Issue | Before | Fix | After |
+|---|---|---|---|
+| Desktop panel, scroll fade over the last visible control (issue 3) | at 1280x800 the pressed "1" of "הבאים" was half washed out; at 1440x900 the whole page-size control lay under the fade | `style.css`: every control of the panel (swatches, "עוד גוונים", colour well, switch, segmented groups, the clear button) is drawn above the fade. The fade stays and still softens text and the panel's background | 1280x800, 1280x720, 1440x900, 1024x768: no control is drawn under the fade; the last visible one is cut by the panel's edge. Scrolled to the end, the last control is clear of the edge |
+| Toast in the Export overlay (issue 4) | 1280x800: toast at 743..784, dialog ends at 760 | `toast.js place()`: a dialog that leaves less room under it than the toast needs takes the toast inside, 8 px above its bottom edge | toast at 711..752, inside the dialog. It lies over the lower 8 px of "להוריד קובץ פרויקט" for its 4 s when the overlay is scrolled to its end (on phones it covered 16 px of that button before and still does). A small dialog with room under it keeps its toast below: the two-tabs dialog at 1280x800 (dialog ends 533, toast 743..784) and at 320x568 (450, 511..552) |
+| Lesson title cut at 320 px (issue 5) | "שיעור 6: האצה…": the title needs 164 px and had 130 | `style.css`, under 400 px: in a lesson Editor the Back link is its arrow only (44x44, its `aria-label` names it), and the title field gives up 2 px of padding a side (all Editors) | 174 px at 320, 181 at 360, 211 at 390. All twelve titles checked at 320: **ten fit**. Lessons 4 and 5 ("שיעור 4: ברצף או מתנוחה לתנוחה", "שיעור 5: המשך תנועה ותנועה חופפת") need 237 and 256 px, more than any phone bar gives, and keep their ellipsis |
+
+### 9.4 The slow Editor leave (item 4)
+
+`leave.mjs`: a stroke, then Back, timed inside the page from the Back press to the Gallery's cards; every `canvas.toBlob` of the leave timed too. **105 leaves, none slower than 297 ms.** No leave near 2.4 s came up, no cause was found, nothing was changed.
+
+| Profile | Case | n | min | median | p90 | max |
+|---|---|---|---|---|---|---|
+| Desktop | one unsaved stroke, Back at once | 15 | 47 | 127 | 238 | 258 ms |
+| Desktop | Back 300 ms after the stroke | 15 | 29 | 46 | 134 | 135 ms |
+| Desktop | five frames with unsaved strokes | 15 | 69 | 155 | 246 | 268 ms |
+| Desktop | stroke 120 ms after arriving, Back at once | 15 | 44 | 126 | 160 | 173 ms |
+| Phone | one unsaved stroke, Back at once | 15 | 54 | 138 | 182 | 237 ms |
+| Phone | Back 300 ms after the stroke | 15 | 27 | 36 | 72 | 161 ms |
+| Phone | five frames with unsaved strokes | 15 | 40 | 124 | 253 | 297 ms |
+
+The longest single `toBlob` was 151 ms, and none ran during a transition. A real phone is still unmeasured.
+
+### 9.5 Release checks (item 5)
+
+| Check | Result |
+|---|---|
+| `?v=` | `index.html`: three tags, all `?v=11`. `404.html` has none |
+| `node tools/build-sw-manifest.mjs`, then `--check` | version `411a89230697`, 73 files, up to date |
+| `node --test "tests/*.test.mjs"` | 63 pass, 0 fail |
+| Site audit (`audit-site.py`) | clean, exit 0 |
+| Every screen, real headers, real service worker (`final-pass.mjs`) | desktop **22 of 22**, phone profile **22 of 22** on its second run (the first had 21: the one video failure of the next row): the worker is active and controls the page (caches `fliploop-shell-411a89230697`, `fliploop-fonts`); Home, Gallery, Settings, Lessons, Lesson, Challenge, Editor (a stroke right on arrival, a second frame, Play, Stop), Export overlay, Print, lesson Editor, challenge Editor, Editor not-found, the 404 page with its new sentence; **0 console errors, 0 page errors, 0 missing string keys, 0 policy violations, 0 failed requests** |
+| `window.__fliploop.selfTest({count:12})` | desktop: gif, gifHalf, video, pdfA4, pdfLetter, pdfJpeg, pngA4 all ok in 8.5 s (video 80 samples, 3.23 s), and again inside the integrator's journey. Phone profile: all ok in 6 of 7 runs; in one run `video` came back false and I did not capture why (the six good runs show a header length of 3.19 to 4.88 s for a 3.25 s plan, so the recording is not steady under this emulation). The export code was not touched in this round |
+| Integrator's journey, real worker (`r-journey.mjs`, `FL_SW=allow`) | 59 of 59 |
+| Integrator's layout sweep, six sizes (`r-layout.mjs`) | 262 of 262. One console line in the run, `net::ERR_CONNECTION_TIMED_OUT` at 768x1024: a request timed out, I did not find out which (the fonts host is the only outside one) |
+| WebKit smoke (`r-webkit.mjs`) | 18 of 18 on the second run. On the first, the desktop profile's first page load waited 30 s for `load` and the script stopped (9 of 9 iPhone checks had passed) |
+| Integrator's contracts (`k.mjs`) | 50 pass, 2 fail: the two K3 keyboard-delete checks. They fail the same way against the build before this round (`fb81036`, served beside it): the script falls back to a mouse click on the confirm button, and then the toast rightly does not take focus. The dedicated `k3b.mjs` passes 7 of 7 |
+
+### 9.6 Open after this round
+
+- Issues 1 to 5 of section 6: 1 fixed, 2 measured with no cause found, 3 to 5 fixed as far as section 9.3 says.
+- Lessons 4 and 5 keep a cut title on phones.
+- The overlay toast lies over the lower edge of the last button for 4 s (8 px on a desktop, 16 px on phones).
+- The phone-profile video self-test failed once in seven runs, cause not found.
+- Still needs a real device: a finger stroke right on arrival, a pen, a double tap on a card, and everything in section 7.
+- Not done here: push, deploy, the Build Manager re-check, the Launch Gate.
+
+**Files changed in this round:** `site/css/style.css` · `site/js/app.js` · `site/js/editor/editor.js` · `site/js/ui/toast.js` · `site/404.html` · `site/index.html` · `site/sw.js` (generated block) · `site/js/data/strings.js` (generated) · `final-ui-copy.md` and `_process/05e-copywriter-fix-round-review.md` (the Copywriter's, committed) · this file.
+
+**Local preview:** `node tools/serve-headers.mjs 9410`, then http://127.0.0.1:9410/
