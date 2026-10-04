@@ -479,7 +479,10 @@
     .goal-strip > .goal__text { grid-area: goal; }
     .goal-strip > .goal__progress { grid-area: prog; }
     .goal-strip > .goal__steps { grid-area: steps; }
-    .goal-strip > .switch { grid-area: switch; }
+    /* Stacked under the "התרגיל" button: 10px between the two boxes (2 + 8), because the button's
+       hit area reaches 6px below its box and the switch's 4px above its own. With 2px the button
+       took the top 7px of the switch, and a tap there opened the exercise sheet. */
+    .goal-strip > .switch { grid-area: switch; margin-block-start: 8px; }
   }
   @media (orientation: landscape) and (min-height: 400px) and (max-height: 500px) and (max-width: 1023px) {
     .tools__row { grid-template-columns: repeat(2, 44px); } /* 4 rows fit from 400px tall */
@@ -527,7 +530,7 @@
   .switch:active .switch__thumb { transform: scale(.82); }
   .switch__label { display: inline-flex; align-items: center; gap: 6px; }
   .goal-strip .switch { position: relative; min-height: 38px; font-size: var(--fs-caption); }
-  .goal-strip .switch::before { content: ""; position: absolute; inset: -3px 0; } /* 44px hit area, the strip stays 38px */
+  .goal-strip .switch::before { content: ""; position: absolute; inset: -4px 0; } /* 46px hit area, the strip stays 38px: measured with elementFromPoint, 38 + 2 x 3 came out as 43 where the box sits on a fraction of a pixel */
   /* Hover (every one has a pressed equivalent above; Part B). Only where a pointer can hover,
      so nothing stays lit after a tap. */
   @media (hover: hover) {
