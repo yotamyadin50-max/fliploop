@@ -380,3 +380,21 @@ Upstream: `_process/03d-web-designer-palette.md` (spec), `_process/05d-copywrite
 **Still to do before release (not done here):** the Copywriter pass over the new keys; section 12's plan amendments into `final-site-plan.md`; `audit-report.md`; Build Manager re-check and Launch Gate; then the release checklist of `12-fix-direction.md` section 11 (Netlify build check first, push, verify on Pages, one Netlify deploy).
 
 **Not verified on real hardware:** the list in `13-integration-notes.md` section 7.
+
+---
+
+## Gatekeeper notes closed (2026-10-04, from `14-gatekeeper-fix-round-review.md`, notes G-01 to G-05)
+
+**State:** seven local commits on `main` (`b49852f` to `96ed592`), NOT pushed, NOT deployed, no Netlify command. `?v=12`, worker `901a3cdbc372`, 73 files. Every number, the scripts and what is still open: **`13-integration-notes.md` section 10**.
+
+**Debugging log (Round 22).** Each note was reproduced with its own script before any fix was kept, and the cause was found, not guessed:
+- G-01: lost 3 of 3 at 40 ms and 3 of 3 at 150 ms. Hypothesis from the review: the next launch refuses the record because the stored project is newer. A test of the fix for exactly that still lost the stroke, and reading `localStorage` at that moment showed the record was already gone: the second tab's own successful save had deleted it (one key per project). Both causes are fixed.
+- G-03: `Math.round` at exactly half way between two insertion bars (left 0 of 5, right 5 of 5).
+- G-04: the prepared drawing was compared in its original place only (all eight frames moved gave 8/8 and the stamp).
+- G-05: `elementFromPoint` showed the hit areas were already 44 px except where the two controls are stacked: there the button's hit area lay over the top 7 px of the switch.
+
+**Revision discipline (Round 23).** Usages checked before each change: `writeRescue`, `clearRescue` and the old `rescueAt` field have one user (`autosave.js`); `applyRescues` has one caller (`app.js`); `db.saveProject` has eleven call sites in five files and every reader of a frame record picks its fields by name, so the new `rev` field is inert for them (backup files do not carry it); `countAddedInk` keeps its signature for its tests, the lesson rule now calls `countAddedInkMoved`; the `.goal-strip .switch::before` rule is the goal strip's only (the panel's switch is not touched). The reason for each fence was read in the code's own comments and in sections 2 and 3 of `13-integration-notes.md`, not in `git blame`: the per-project record key and "applied at launch only" are R2's, written for one tab closing, before a second open tab was part of the picture.
+
+**Developer-authored microcopy:** none. One row was added to `final-ui-copy.md` (24.6, `lesson.1.nameBefore`): the old lesson name, kept for a comparison and never shown.
+
+**Checklist walkthrough (Round 21), the items that apply to a fix round:** code quality: comments say why, pure logic has `node --test` cases (7 new), no new `innerHTML`, no new dependency, no secret · functional QA: zero console errors, zero policy violations, zero missing keys, zero failed requests on a pass through every screen at desktop and phone size with the real worker; Playwright WebKit for G-01; real Safari and a real phone NOT DONE (no device) · launch readiness: `?v=` bumped on every reference, manifest rebuilt and checked, unit tests 70 of 70, `selfTest({count:12})` ok, site audit clean; the Gatekeeper's re-check is still to come. Self-review: the full diff was read once as a stranger's pull request before the notes were written; it found the Web Lock refusal case (commit `96ed592`).

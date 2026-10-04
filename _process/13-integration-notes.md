@@ -423,3 +423,129 @@ The longest single `toBlob` was 151 ms, and none ran during a transition. A real
 **Files changed in this round:** `site/css/style.css` · `site/js/app.js` · `site/js/editor/editor.js` · `site/js/ui/toast.js` · `site/404.html` · `site/index.html` · `site/sw.js` (generated block) · `site/js/data/strings.js` (generated) · `final-ui-copy.md` and `_process/05e-copywriter-fix-round-review.md` (the Copywriter's, committed) · this file.
 
 **Local preview:** `node tools/serve-headers.mjs 9410`, then http://127.0.0.1:9410/
+
+## 10. Gatekeeper notes closed (2026-10-04)
+
+**Role:** Developer · **Upstream:** `_process/14-gatekeeper-fix-round-review.md`, notes G-01 to G-05 (G-06 is review-only) · **Branch:** `main`, local commits only. Nothing pushed, nothing deployed, no Netlify command.
+**Server:** `node tools/serve-headers.mjs 9410` (real response headers, policy active, no `bypassCSP`). **Browser:** installed Chrome through Playwright 1.49.1, real mouse and touch input. **Scripts and outputs:** scratchpad `pw2/gate-fixes/` (my own `lib.mjs`; results are read from IndexedDB and from frame pixels, not from labels).
+
+| Note | Result | Commit |
+|---|---|---|
+| G-01 a closed tab's last stroke is lost when a second tab draws next | **Fixed**: kept 3 of 3 at 40 ms and 3 of 3 at 150 ms (it was lost 3 of 3 and 3 of 3) | `b49852f`, `96ed592` |
+| G-02 the old lesson 1 project's stored title | **Fixed**: renamed at launch, a typed title is left alone | `1f5616d` |
+| G-03 a drag of exactly one cell width to the left | **Fixed**: 5 of 5 left, 5 of 5 right, mouse and touch (left was 0 of 5) | `09fe6b8` |
+| G-04 the Move tool on a prepared lesson frame counts as drawn | **Fixed**: stays 0/8 (it gave 8/8 and the stamp) | `c9a2fd4` |
+| G-05 touch targets of "התרגיל" and "רמזים" | **Fixed where the real hit area was short**: landscape phones, the switch was 37 px tall to a finger; now 45 px or more at 12 sizes | `2df0f18` |
+| Release prep | `?v=12`, worker `901a3cdbc372`, 73 files | `5d69a1c`, `96ed592` |
+
+### 10.1 G-01 · a closed tab's last stroke, when a second tab draws next · FIXED (commits `b49852f`, `96ed592`)
+
+**Reproduced first** (`g01-two-tabs-close.mjs`, the candidate before the fix): tab A draws, is closed 40 ms or 150 ms after the stroke, tab B draws 1.2 s later. A's last stroke (2,336 px) stored afterwards: **0 px in 3 of 3 runs at 40 ms and in 3 of 3 at 150 ms**. No dialog, B read "נשמר".
+
+**Cause, two parts.** (1) The one the Gatekeeper named: at the next launch the record is refused because the stored project is newer. (2) One more, found while testing the merge: the record never reached that launch at all. The record's key was one per project, and tab B's own successful save ends with "the unload record is redundant, delete it", so B deleted A's record.
+
+**Fix** (`store/rescue.js`, `store/autosave.js`, `store/db.js`, `app.js`, `editor.js`):
+
+- **The Gatekeeper's direction.** Any open tab takes a rescue record in the moment it appears (a `storage` event), under a Web Lock so only one tab does it. The Editor then treats it as any other tab's save (the existing R3 path): with nothing unsaved it reloads its document by itself; with unsaved work it writes nothing and shows the two-tab dialog. The listener sits in the app shell, not in the Editor, so a tab on the Gallery or on Home takes the record in too.
+- **One record per project and per tab** (the key ends with a tab id). A tab deletes only its own record. A record in the old key form, written by the build before this one, is still applied at launch.
+- **Where the direction leaves a choice** (the stored project has already moved on when the record is looked at: the other tab never got the event, or its own save won a race): the record is applied **frame by frame**. Every stored frame now carries `rev`, the project `updatedAt` of the write that stored it (`db.saveProject`, one place). A frame nobody stored since the closed tab's version gets the rescued pixels. A frame somebody did store since is **never written over**: if it already holds the same pixels, there is nothing to do; if not, the closed tab's version is kept as a project of its own with the "(עותק)" title (its frames in its order). The same copy is made for an unsaved title, speed, frame order or deletion that the stored project does not have. A record is dropped only when its content is stored.
+- **A tab that is only hidden** (it writes the same record and stays alive) recognises its own record when another tab applied it, and goes on from that version, also when it hears of it before its own save runs. Without this the new path would have given that tab a false two-tab dialog.
+- No new string. The copy uses the existing `common.copySuffix`.
+
+**Measured after the fix** (every script: 0 console errors, 0 policy violations, 0 missing keys):
+
+| Check | Script | Result |
+|---|---|---|
+| A closed 40 ms / 150 ms after its stroke, B draws next | `g01-two-tabs-close.mjs` | **3 of 3 and 3 of 3 kept**: stored frame holds A's first stroke 2,336, A's last stroke 2,336 and B's stroke 788; B showed A's stroke before it drew; no dialog, B "נשמר", 0 orphans, no record left |
+| The Gatekeeper's own `x2-rescue-two-tabs.mjs` | `pw2/gate/` | A's stroke kept in 4 of 4 "B draws next" runs (40, 40, 150, 600 ms; stored 5,676 = A's 4,672 + B's). Its second check now reports FAIL **by design**: it expects the stale tab to be stopped by the dialog after a new tab booted first; the stale tab now follows by itself (it showed 4,672 before drawing) and saves on top |
+| A new tab boots first, B never got the event | `g01-more.mjs boot` | 3 of 3: the new tab shows A's stroke, B reloads by itself, draws, saves; all three strokes stored |
+| B holds an open stroke when A is closed | `g01-more.mjs unsaved` | 3 of 3: A's stroke is in IndexedDB at once, B's page is not swapped under the pen; when B's stroke ends: the two-tab dialog, "לא נשמר", **B wrote nothing**; "להוריד את מה שיש כאן" gives B's drawing; "לטעון את הגרסה החדשה" shows A's stroke and B saves normally afterwards; one project, no copy |
+| B finished a stroke just before A was closed | same | 4 of 4: the dialog, B wrote nothing, A's stroke stored |
+| B never got the event and saved **another frame** first, then a launch | `g01-more.mjs merge` | A's frame goes in (2,336), B's frame untouched (788), no copy, B follows by itself |
+| B never got the event and saved the **same frame** first, then a launch | same | B's project is not written at all (same `updatedAt`, same ink per frame); A's version is in the Gallery as "האנימציה שלי 1 (עותק)", 2 frames, A's stroke in it; a second launch makes no second copy |
+| The same with frames stored by the released build (no `rev`) | same | nothing is assumed: not written into the newer project, kept as a copy |
+| A changed only the title and was closed, B saved first | same | B's project keeps its title, a copy carries "שם חדש John 7 (עותק)" |
+| A only hidden, not closed (5 runs) | `g01-more.mjs alive` | stroke stored, A "נשמר" and not in conflict, B shows it, no dialog in either tab, no copy; A draws again: saved, B follows |
+| Two other tabs, Web Locks switched off | `g01-more.mjs nolocks` | 3 of 3: stored once, no copy, both tabs show it, no dialog |
+| A record in the old key form | `g01-more.mjs oldrecord` | 2 of 2 applied at launch and removed |
+| The browser refuses the Web Lock itself | `g01-more.mjs lockfail` | 2 of 2 in an open tab and 2 of 2 at a launch: the record still goes in (commit `96ed592`) |
+| Playwright WebKit (not real Safari) | `wk-g01.mjs` | A leaves inside the save delay by navigating away, B draws next: **3 of 3 kept** (2,336 and 788 stored), B had the stroke before it drew, Web Locks present. `page.close()` in this engine leaves no rescue record even with one tab (measured: 0 records), so a closed tab cannot be simulated there |
+
+**No regression** (`reg-save.mjs`):
+
+| Area | Result |
+|---|---|
+| Two tabs (finding 3, the old F4) | 8 of 8: idle B follows A to 4 frames; B then draws: order 4, records 4, **orphans 0**; a stale B with an open stroke writes nothing (stored version unchanged) and shows the dialog with "לא נשמר"; B closed in that state leaves no record and A's version stays; six strokes in turn from two tabs: all six stored, no dialog, no copy |
+| Reload and close survival (finding 1) | stroke kept in memory and in IndexedDB after a reload and after a tab close at 50 / 300 / 1000 ms: **6 of 6 alone, 6 of 6 with a second tab open** (which then shows the stroke by itself, no dialog); one project, no record left |
+| Save honesty (finding 1) | label sampled inside the page while 12 strokes are drawn: "נשמר" read in 123 samples alone and 132 with a second tab open (the run on the final commit), **IndexedDB differed from the canvas in 0 of them**; the label right after each stroke was "שומרים…" every time |
+| Unit tests | 3 new tests for the decision function `planRescue` (whole, per frame, project changes) |
+
+**Limits, said plainly.** The per-frame rule needs `rev`, so a frame last stored by the released build is treated as "unknown" until it is saved once by this build: in that corner the closed tab's work lands in a copy instead of in the project. The copy appears in the Gallery without a message (no string exists for it; a toast line would be a Copywriter decision). A frame the closed tab had just added, when the other tab saved first, also goes to the copy rather than into the newer project. A tab that is closed while the two-tab dialog is open still drops its unsaved work, as before (the dialog offers the download). An idle second tab that takes the stroke in reloads its document, as it already does after any other tab's save, so its undo history starts again. Real Safari was not tested: the `storage` event and Web Locks are standard there (Locks from 15.4; without them the code runs unlocked and the second pass finds the pixels stored), and the write in `pagehide` itself was already on the real-device list.
+
+### 10.2 G-02 · the old lesson 1 project's stored title · FIXED (commit `1f5616d`)
+
+**Before** (`g02-old-title.mjs`, stored title set back to what the released build wrote): after a launch the Gallery card, the Editor top bar, its heading and the tab title all read "שיעור 1: מתיחה וכיווץ".
+
+**Fix.** At launch (`special-projects.js renameOldLessonTitles()`, called from `app.js` after the rescue records are applied), a lesson project whose stored title is still exactly the default built from the lesson's earlier name gets today's default. `updatedAt` is not touched, so the Gallery order and a backup's "already here" check stay as they were. The earlier name is one row in `final-ui-copy.md` (section 24.6, key `lesson.1.nameBefore`), generated into `strings.js` by `tools/build-strings.mjs` (561 UI keys). It is the old text kept word for word for the comparison and is never shown; no new copy was written. Only lesson 1 was renamed between the released build and now (checked with `git show a87cb93:site/js/data/lesson-copy.js`).
+
+**After:** 8 of 8. Stored title, Gallery card, Editor top bar, heading and tab title read "שיעור 1: מתיחה ומעיכה"; `updatedAt` unchanged; lesson 2, a free project that happens to carry the same words, and a title somebody typed ("... שלי") are all left alone.
+
+### 10.3 G-03 · a drag of exactly one cell width · FIXED (commit `09fe6b8`)
+
+**Before** (`g03-drag-tie.mjs`, long press at a cell's centre, drag exactly 72 px, real mouse at 1280x800 and real touch at 390x844): right 5 of 5 moved, **left 0 of 5**; exactly two cells: right two places, left only one.
+
+**Cause.** The drop slot is the insertion bar nearest the pointer. From a cell's centre, a whole number of cells puts the pointer exactly half way between two bars, and `Math.round` took the right-hand bar both ways.
+
+**Fix.** `core/frame-order.js dropSlot()`: the nearest bar, and within a quarter pixel of the middle the bar the drag is heading for. `strip.js dragUpdate()` uses it. The bar on screen is drawn from the same slot, so the frame still lands where the bar shows.
+
+**After:** 17 of 17. Left 5 of 5 and right 5 of 5 on mouse and on touch; two cells each way: two places; away and back: stays; drags of 30 and 64 px stay, 80 px moves one place (unchanged rule: from the centre the next bar is a whole cell away); the last of 14 frames held at the left edge still travels to the start; a long press without movement is still a tap; stored order equals the screen. One unit test.
+
+### 10.4 G-04 · the Move tool on a prepared lesson frame · FIXED (commit `c9a2fd4`)
+
+**Before** (`g04-move-counts.mjs`, lesson 5, real drags): Move on frame 2 gave "1/8"; Move on all eight frames gave **"8/8 צוירו" and, after Play, the stamp sheet "קיבלתם חותמת"**. So this was more than an observation: it was a third route to a stamp without drawing, next to the two of finding 14.
+
+**Cause.** The rule counts ink that the prepared drawing does not have, with the prepared drawing in its original place. A moved drawing is all "new" by that measure.
+
+**Fix** (`core/lesson-diff.js countAddedInkMoved()`, used by `lesson-mode.js frameDone()`). The Move tool shifts the whole frame by whole pixels, so the count is also taken against the prepared drawing moved to where the frame's ink is: the moves that put a side of the prepared drawing's ink box on the same side of the frame's ink box (four at most), and the smallest count wins. It needs no stored state, so it holds after undo, a reload, an import and a canvas size change. Ink drawn on a moved frame counts under every one of those moves; erased ink still never counts.
+
+**After:** 11 of 11 on lesson 5 and 11 of 11 on lesson 8 (the other lesson with a drawing on every frame). Move with the figure whole on the page (2,213 px before and after, box moved by exactly 29 and 14 px): 0/8. All eight moved, then Play: 0/8, no sheet, no stamp. Moved until the edge cuts part of it: 0. Moved, then erased along one side and along a second side: 0. Moved, then a pencil line: 1/8. Drawn, then moved: stays counted. The same after undo and after a reload. The rule for all 8 frames takes 10 to 24 ms. Two unit tests. **Regression** (`reg-lessons.mjs`): all 12 lessons still reach their stamp by drawing (sheet by itself 1,009 to 1,534 ms after Play), and on lesson 5 "ניקוי הפריים" on all eight frames plus the eraser across all eight still gives 0/8, no sheet, no stamp.
+
+**Limit.** Moved, then erased so that all four sides of the drawing's box change, with nothing drawn: no side lines up any more, and the frame counts as drawn. Before this fix every move counted.
+
+### 10.5 G-05 · touch targets of "התרגיל" and "רמזים" · FIXED where the real hit area was short (commit `2df0f18`)
+
+Measured with `document.elementFromPoint` (`g05-touch-targets.mjs`): every point around each control on a 1 px grid, a 44 x 44 square on its centre, and real taps 21 px above, below, left and right of the centre. Lesson 6, 12 sizes (320x568, 360x740, 390x844, 568x320, 640x300, 667x375, 844x390, 932x430, 768x1024, 1024x768 touch and mouse, 1280x800).
+
+**Before.** The drawn boxes are 86x32 and 80x38, as the Gatekeeper measured. Both already carried a 44 px hit area through a `::before` box, and that held at 8 of the 12 sizes (hit area 95 px by 45 or 46, and 81 px by 45). **On landscape phones (568x320, 667x375, 844x390, 932x430) the switch was 81x37 to a finger:** there the two are stacked 2 px apart, the button's hit area lay over the top 7 px of the switch, and a tap 21 px above the switch's centre opened the exercise sheet instead of switching the hints (3 of 4 taps reached the switch).
+
+**Fix** (`style.css`): the stacked pair sits 10 px apart, and the switch's hit area is 46 px (38 + 2 x 4) so it does not drop under 44 where the box sits on a fraction of a pixel. The drawn sizes are unchanged (a visual size is the Web Designer's call).
+
+**After:** 5 of 5. Hit areas at all 12 sizes: "התרגיל" 95 or 96 px wide and 45 or 46 px tall, "רמזים" 81 px wide and 45 to 47 px tall; the 44 x 44 square reaches its own control at every point; the four taps work on every size (a tap counts only when it reached its own control and not the neighbour); the canvas keeps its own top edge and corner; no sideways scroll. Screenshots `shots/g05-after-844x390.png` and `g05-after-568x320.png` opened and looked at: the goal card fits without scrolling.
+
+### 10.6 Release checks
+
+| Check | Result |
+|---|---|
+| `?v=` | `index.html`: three tags, all `?v=12`. `404.html` has none |
+| `node tools/build-sw-manifest.mjs`, then `--check` | version `901a3cdbc372`, 73 files, up to date |
+| `node tools/build-strings.mjs` | 561 UI keys, 52 themes, 133 lesson keys; no difference to the committed files |
+| `node --test "tests/*.test.mjs"` | **70 pass, 0 fail** (63 before, 7 new in `tests/gnotes.test.mjs`) |
+| Site audit (`audit-site.py`) | clean, exit 0 |
+| Every screen, real headers, real service worker (`final-pass.mjs`, a fresh persistent profile each) | desktop **12 of 12**, phone profile **12 of 12**: worker `901a3cdbc372` active and in control; Home, Gallery, Settings, Lessons, Lesson, Challenge; Editor (two strokes on two frames saved, every stored frame carries `rev`; Play, Stop); frames stripped of `rev` (as the build before stored them): open, a stroke, reload 60 ms later, kept; Export overlay, Print; lesson Editor (hints switch, exercise steps); challenge Editor; Editor not-found; the Hebrew 404 page with status 404. **0 console errors, 0 page errors, 0 policy violations, 0 missing string keys, 0 failed requests** (the one console line is the browser's own notice for the unknown path asked for on purpose) |
+| `window.__fliploop.selfTest({count:12})` | desktop and phone profile: gif, gifHalf, video, pdfA4, pdfLetter, pdfJpeg, pngA4 all ok in 8.5 to 8.8 s (video 79 samples, 3.28 s) |
+| Every script of this round, run again on the final commit `96ed592` | `g01-two-tabs-close.mjs` 3 of 3 and 3 of 3 · `g01-more.mjs`: `unsaved` 18 of 18, `merge` 10 of 10, `boot` 4 of 4, `alive` 4 of 4, `nolocks` 7 of 7, `lockfail` 5 of 5, `oldrecord` 3 of 3 · `reg-save.mjs`: `twotabs` 8 of 8, `reload` 6 of 6, `honesty` 6 of 6 · `g02` 8 of 8 · `g03` 17 of 17 · `g04` 11 of 11 · `g05` 5 of 5 |
+
+Said so nobody chases them: three checks of my own scripts were wrong on the first run and were corrected, not the app. A background tab's save comes late in headless Chrome (its timers are slowed), so the stale-tab check has to bring that tab to the front first; my "every pixel kept" check moved the lesson 5 figure off the bottom edge; and a stroke after a reload lands on the frame the Editor came back to, not on frame 1.
+
+### 10.7 Open after this round
+
+- **For the Gatekeeper's re-check:** its own `x2-rescue-two-tabs.mjs` now passes its first check and fails its second by design (section 10.1). The rescue record's key now ends with a tab id (`fliploop-rescue:<project>:<tab>`); a script that looks the record up by the old exact key has to look it up by prefix.
+- **For the Copywriter or Build Manager, a decision, not a defect:** the "(עותק)" project that keeps a closed tab's version (the corner of section 10.1) arrives without a word. A toast would need one new string.
+- **NOT DONE: the automatic update from the worker before this one** (`411a89230697` to `901a3cdbc372`) was not re-run with a real version switch. `pwa.js` and `sw.js` logic were not touched; a fresh profile installs and runs the new worker (section 10.6).
+- **NOT DONE: real Safari, a real phone.** Everything in section 7 stands. New on that list: a tap on the "רמזים" switch on a real landscape phone, and two real Safari tabs for G-01.
+- G-06 (largest contentful paint 4.0 s on the script's throttled connection) is review-only and was not worked on.
+- Not done here: push, deploy, any Netlify command.
+
+**Files changed in this round:** `site/js/store/rescue.js` · `site/js/store/autosave.js` · `site/js/store/db.js` · `site/js/store/special-projects.js` · `site/js/app.js` · `site/js/editor/editor.js` · `site/js/editor/strip.js` · `site/js/editor/lesson-mode.js` · `site/js/core/frame-order.js` · `site/js/core/lesson-diff.js` · `site/css/style.css` · `site/index.html` · `site/sw.js` (generated block) · `site/js/data/strings.js` (generated) · `final-ui-copy.md` (one row, section 24.6) · `tests/gnotes.test.mjs` (new) · this file · `_process/07-developer-notes.md`.
+
+**Local preview:** `node tools/serve-headers.mjs 9410`, then http://127.0.0.1:9410/
