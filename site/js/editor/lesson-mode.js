@@ -1,7 +1,7 @@
 // Lesson mode inside the Editor (plan 2, Lesson mode; Ruling 5; fix round R14 to R17).
 // Done rule: every blank frame holds 50+ pixels of ink ADDED to its own prepared drawing
-// (re-derived from lessons.js; removed ink never counts), and lesson 9 also needs one hold
-// changed. When Play is pressed with the rule met, the animation plays one full cycle,
+// (re-derived from lessons.js; removed ink never counts, and neither does prepared ink that
+// was only moved with the Move tool), and lesson 9 also needs one hold changed. When Play is pressed with the rule met, the animation plays one full cycle,
 // stops by itself and the stamp sheet opens. Stop before that opens it too. The sheet only
 // ever opens at the moment the stamp is first earned.
 import { h, richText } from "../lib/dom.js";
@@ -9,7 +9,7 @@ import { t, tp } from "../lib/i18n.js";
 import { on } from "../lib/bus.js";
 import { getLesson, lessonText, hasGuides, STARTERS } from "../data/lessons.js";
 import { drawStrokes } from "../lib/raster.js";
-import { countAddedInk, DONE_PIXELS, lessonOffset, shiftStrokes } from "../core/lesson-diff.js";
+import { countAddedInkMoved, DONE_PIXELS, lessonOffset, shiftStrokes } from "../core/lesson-diff.js";
 import { makeCanvas, ctx2d, isDesktop } from "../lib/util.js";
 import { getProgress, updateProgress } from "../store/settings.js";
 import { openSheet } from "../ui/dialog.js";
@@ -117,7 +117,7 @@ export class LessonMode {
     if (!f || f.lessonRole !== "blank") return true;
     const data = f.ctx.getImageData(0, 0, f.canvas.width, f.canvas.height).data;
     const ref = this.preparedFor(i) || new Uint8ClampedArray(data.length);
-    return countAddedInk(data, ref) >= DONE_PIXELS;
+    return countAddedInkMoved(data, ref, f.canvas.width, undefined, DONE_PIXELS) >= DONE_PIXELS;
   }
 
   recomputeAll() {
