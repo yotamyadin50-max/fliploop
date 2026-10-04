@@ -557,6 +557,7 @@ export const STRINGS = {
   "page404.h1": "הדף הזה לא נמצא",
   "page404.body": "אולי יש טעות בכתובת. שום דבר לא נמחק.",
   "page404.home": "הביתה",
+  "lesson.1.nameBefore": "מתיחה וכיווץ",
   "tool.width.s": "דק",
   "tool.width.m": "בינוני",
   "tool.width.l": "עבה"

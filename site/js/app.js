@@ -22,6 +22,7 @@ import { registerServiceWorker, swVersion, takeResume } from "./pwa.js";
 import { applyRescues, isRescueKey } from "./store/rescue.js";
 import { storageState } from "./store/db.js";
 import { purgeUntouched } from "./store/projects.js";
+import { renameOldLessonTitles } from "./store/special-projects.js";
 import { on } from "./lib/bus.js";
 
 const SCREENS = {
@@ -358,6 +359,8 @@ async function boot() {
   await loadSettings();
   // Blank projects nobody drew in for a day are removed (R5).
   if (storageUp) await purgeUntouched().catch((err) => { if (err && typeof err === "object") err.handled = true; });
+  // A lesson that was renamed: its project made before the rename gets the new default title.
+  if (storageUp) await renameOldLessonTitles().catch((err) => { if (err && typeof err === "object") err.handled = true; });
   refreshPersisted();
   checkNearlyFull({ force: true });
   const router = new Router(main);

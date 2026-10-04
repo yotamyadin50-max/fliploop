@@ -878,6 +878,12 @@ Frame delete and clear frame have no dialog, by plan: they use a 5 s undo toast.
 | `page404.body` | אולי יש טעות בכתובת. שום דבר לא נמחק. | Static, `site/404.html`: body line. The page cannot check what is saved, so it says only what is always true, in the words of `storage.readFailed.body`; and it does not say who wrote the address. **Changed in the Copywriter review: the same sentence must be typed by hand into `site/404.html` (the `<p>` under the `<h1>`)** |
 | `page404.home` | הביתה | Static, `site/404.html`: the one link, to the app's Home (R40) |
 
+### 24.6 Gatekeeper notes (2026-10-04)
+
+| Key | Hebrew | Where / notes |
+|---|---|---|
+| `lesson.1.nameBefore` | מתיחה וכיווץ | Never shown. The name lesson 1 had until R19 renamed it to `lesson.1.title` (lessons deliverable). Read once at launch: a lesson 1 project whose stored title is still exactly `lesson.projectTitle` with this name gets the current name (Gatekeeper note G-02). Not new copy: it is the old text, kept word for word so the comparison matches |
+
 ### Notes
 
 - **Angle:** the researcher's recommended lead, "your drawing moves for the first time," lives in exactly two places so it stays strong: the Home subtitle (the promise) and `firstPlay.line` (the payoff). "הציור שלכם הפך לסרט" is the one deliberate pattern break. It names the film strip the user just watched run, instead of a generic "כל הכבוד". Everything else is plain, calm instruction, which the brief's Low/Feel reading asks for.

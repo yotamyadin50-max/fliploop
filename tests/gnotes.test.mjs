@@ -3,6 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { planRescue } from "../site/js/store/rescue.js";
+import { STRINGS } from "../site/js/data/strings.js";
+import { LESSON_COPY } from "../site/js/data/lesson-copy.js";
 
 const PNG = "data:image/png;base64,iVBORw0KGgo=";
 const frame = (id, over = {}) => ({ id, hold: 1, lessonRole: "free", locked: false, png: PNG, ...over });
@@ -17,6 +19,12 @@ const record = (over = {}) => ({
 });
 const stored = (revs) => new Map(Object.entries(revs).map(([id, rev]) => [id, { id, hold: 1, rev }]));
 const ids = (list) => list.map((f) => f.id);
+
+test("the name lesson 1 had before its rename is kept as a string, apart from the current one (G-02)", () => {
+  assert.ok(STRINGS["lesson.1.nameBefore"]);
+  assert.notEqual(STRINGS["lesson.1.nameBefore"], LESSON_COPY["lesson.1.title"]);
+  assert.match(STRINGS["lesson.projectTitle"], /\{n\}.*\{lessonName\}/);
+});
 
 test("rescue record: the stored project is the version the closed tab knew, all of it goes in (R2)", () => {
   assert.deepEqual(planRescue(record(), project(), stored({ a: 90, b: 100, c: 95 })), { mode: "whole" });
