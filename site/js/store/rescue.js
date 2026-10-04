@@ -260,14 +260,17 @@ async function withLock(fn, waitMs) {
   if (!locks?.request) return fn(); // no Web Locks: a second pass finds the content stored and writes nothing
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), waitMs);
+  let entered = false;
   try {
     return await locks.request(LOCK, { signal: ctl.signal }, () => {
+      entered = true;
       clearTimeout(timer);
       return fn();
     });
   } catch (err) {
+    if (entered) throw err;
     if (err?.name === "AbortError") return null; // the tab that holds the lock is applying them
-    throw err;
+    return fn(); // the browser refused the lock itself: the records still have to go in
   } finally {
     clearTimeout(timer);
   }
