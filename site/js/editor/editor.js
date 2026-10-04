@@ -187,6 +187,9 @@ export class EditorScreen {
   onPeerSaved({ type, projectId, updatedAt }) {
     if (type !== "saved" || projectId !== this.projectId || this.disposed || !this.autosaver) return;
     if (!(updatedAt > this.autosaver.baseUpdatedAt)) return;
+    // This tab's own unsaved work, stored by another tab from its rescue record while this tab
+    // was hidden: nothing new to load, and this tab's next save goes on top of it.
+    if (this.autosaver.adoptOwnRescue(updatedAt)) return;
     const idle = this.autosaver.isClean && !this.input.active && !this.undo.busy && !this.strip.drag && !this.exportCtl;
     if (idle) this.reloadDocument();
     // Otherwise the next write finds the newer version, writes nothing, and showConflict() asks.
@@ -423,6 +426,9 @@ export class EditorScreen {
       activeStroke: () => this.input?.active || null,
     });
     this.cleanups.push(onPeerMessage((msg) => this.onPeerSaved(msg)));
+    // A closed tab's last strokes that this tab just put into IndexedDB (store/rescue.js) are a
+    // newer version like any other: follow it when idle, otherwise the two-tab dialog (G-01).
+    this.cleanups.push(on("project-rescued", (msg) => this.onPeerSaved({ type: "saved", ...msg })));
     // The frame, tool and colour survive a reload of this tab (F13).
     const keepView = () => { if (document.visibilityState === "hidden") this.saveView(); };
     const keepViewNow = () => this.saveView();

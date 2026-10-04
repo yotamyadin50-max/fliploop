@@ -219,11 +219,13 @@ function conflict(kind, storedUpdatedAt = null) {
  * expectedUpdatedAt (two-tab rule, R3): the stored `updatedAt` the caller last read or wrote.
  * When the stored record is newer, or gone, nothing is written and the call rejects with
  * `err.conflict` ("newer" | "missing").
+ * Every frame written gets `rev`, the project `updatedAt` of this write: it says which
+ * version of the project last changed that frame (store/rescue.js reads it).
  */
 export async function saveProject(project, framesToPut = [], frameIdsToDelete = [], { expectedUpdatedAt } = {}) {
   // Pack before opening the transaction: IndexedDB commits as soon as it goes idle.
   const packedProject = await packProject(project);
-  const packedFrames = await Promise.all(framesToPut.map(packFrame));
+  const packedFrames = await Promise.all(framesToPut.map((f) => packFrame({ ...f, rev: project.updatedAt })));
   return tx(["projects", "frames"], "readwrite", async (t) => {
     const ps = t.objectStore("projects");
     if (expectedUpdatedAt !== undefined) {

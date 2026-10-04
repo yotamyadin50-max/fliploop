@@ -9,8 +9,8 @@
 //
 // Unload: an async write started in `pagehide` does not finish, so on `pagehide` and on
 // `visibilitychange: hidden` the pending work also goes into localStorage, synchronously
-// (store/rescue.js). Boot applies that record. A successful save that leaves nothing
-// pending deletes it.
+// (store/rescue.js). Boot applies that record, and so does any other tab that is open when
+// it appears. A successful save that leaves nothing pending deletes it.
 //
 // Two tabs: every write names the stored version this tab last read or wrote. If a newer
 // one is stored, nothing is written, the saver stops (`conflict`) and the Editor asks the
@@ -51,8 +51,9 @@ export class Autosaver {
     this.lastAttemptAt = Date.now();
     this.baseUpdatedAt = doc.project.updatedAt; // the stored version this tab last read or wrote
     this.inflightUpdatedAt = null;
-    this.rescueAt = null;
+    this.rescues = []; // times of the rescue records written since this tab's last own save
     this.writing = new Set(); // frames inside the write that is running
+    this.writingProject = false; // that write also carries a project change (title, settings, order, a deletion)
     this.state = "saved";
     this.interval = setInterval(() => this.tick(), TICK);
     this.onHidden = () => { if (document.visibilityState === "hidden") this.leaving(); };
@@ -172,6 +173,7 @@ export class Autosaver {
     const frames = doc.frames.filter((f) => all || f.dirty);
     const snapshot = [];
     this.writing = new Set(frames);
+    this.writingProject = projectWasDirty || deleted.length > 0;
     try {
       const records = [];
       for (const f of frames) {
@@ -200,6 +202,8 @@ export class Autosaver {
       for (const { f, version } of snapshot) f.savedVersion = version;
       for (const id of deleted) doc.deletedIds.delete(id);
       this.writing = new Set();
+      this.writingProject = false;
+      this.rescues = [];
       this.lastAttemptAt = Date.now();
       const wasFailed = this.failed;
       this.failed = false;
@@ -214,6 +218,7 @@ export class Autosaver {
       for (const { f, metaWasDirty } of snapshot) if (metaWasDirty) f.metaDirty = true;
       this.inflightUpdatedAt = null;
       this.writing = new Set();
+      this.writingProject = false;
       this.pendingSince = pendingSince ?? Date.now();
       this.lastAttemptAt = Date.now();
       if (err?.conflict === "missing") {
@@ -224,12 +229,7 @@ export class Autosaver {
         return { ok: false, info: {}, retry: true };
       }
       if (err?.conflict === "newer") {
-        if (this.rescueAt !== null && err.storedUpdatedAt >= this.rescueAt && err.storedUpdatedAt <= this.rescueAt + 1) {
-          // "Newer" is this tab's own rescue record, applied by another tab's launch.
-          this.baseUpdatedAt = err.storedUpdatedAt;
-          this.rescueAt = null;
-          return { ok: false, info: {}, retry: true };
-        }
+        if (this.adoptOwnRescue(err.storedUpdatedAt)) return { ok: false, info: {}, retry: true };
         this.conflict = true;
         return { ok: false, info: { conflict: true } };
       }
@@ -240,9 +240,22 @@ export class Autosaver {
     }
   }
 
+  /**
+   * A stored version that is newer than this tab's is this tab's own rescue record when
+   * another tab applied it (at its launch, or the moment the record appeared while this tab
+   * was hidden): rescue.js stores it under the record's time, or one above. Everything in it
+   * is already on this screen, so this tab goes on from that version. Returns false for any
+   * other version.
+   */
+  adoptOwnRescue(updatedAt) {
+    if (this.conflict || !this.rescues.some((at) => updatedAt >= at && updatedAt <= at + 1)) return false;
+    if (updatedAt > this.baseUpdatedAt) this.baseUpdatedAt = updatedAt;
+    return true;
+  }
+
   /** `pagehide` or `visibilitychange: hidden`: the synchronous record first, then the normal save. */
   leaving() {
-    if (this.conflict) return; // a newer version is stored: boot would refuse this record anyway
+    if (this.conflict) return; // a newer version is stored and the dialog said so: what is here can be downloaded there
     this.rescue();
     this.saveNow();
   }
@@ -253,10 +266,12 @@ export class Autosaver {
     if (!this.isDirty && !this.saving) return null;
     this.markTouched();
     const frames = doc.frames.filter((f) => f.dirty || this.writing.has(f));
-    this.rescueAt = writeRescue(doc, {
+    const at = writeRescue(doc, {
       frames, stroke: this.activeStroke(), base: this.baseUpdatedAt, inflight: this.inflightUpdatedAt,
+      projectDirty: doc.projectDirty || doc.deletedIds.size > 0 || this.writingProject,
     });
-    return this.rescueAt;
+    if (at !== null) this.rescues = [...this.rescues.slice(-15), at];
+    return at;
   }
 
   /** Stops timers and listeners without saving (the document is being replaced or reloaded). */

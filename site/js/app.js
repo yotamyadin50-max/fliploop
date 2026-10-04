@@ -19,7 +19,7 @@ import { toast } from "./ui/toast.js";
 import { closeAllSheets, sheetsOpen, closeTopSheet } from "./ui/dialog.js";
 import { emit } from "./lib/bus.js";
 import { registerServiceWorker, swVersion, takeResume } from "./pwa.js";
-import { applyRescues } from "./store/rescue.js";
+import { applyRescues, isRescueKey } from "./store/rescue.js";
 import { storageState } from "./store/db.js";
 import { purgeUntouched } from "./store/projects.js";
 import { on } from "./lib/bus.js";
@@ -326,6 +326,18 @@ function watchStorageErrors() {
   });
 }
 
+/**
+ * Another tab left its unsaved strokes in a rescue record (it was closed, or hidden, inside
+ * the save delay). They go into IndexedDB now, not at the next launch, so whatever this tab
+ * saves next is saved on top of them (Gatekeeper note G-01). The Editor follows by itself.
+ */
+function watchRescues() {
+  addEventListener("storage", (e) => {
+    if (!isRescueKey(e.key) || !e.newValue) return;
+    applyRescues({ waitMs: 30000 }).catch((err) => console.warn("Rescue records were not applied", err));
+  });
+}
+
 async function boot() {
   captureErrors();
   watchStorageErrors();
@@ -341,6 +353,7 @@ async function boot() {
     console.error("IndexedDB unavailable", err);
   }
   // Work that an unload cut off (store/rescue.js) goes back into IndexedDB before any screen reads it.
+  if (storageUp) watchRescues(); // before the first pass, so a record written during it is not missed
   if (storageUp) await applyRescues().catch((err) => console.warn("Rescue records were not applied", err));
   await loadSettings();
   // Blank projects nobody drew in for a day are removed (R5).
