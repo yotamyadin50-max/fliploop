@@ -10,8 +10,10 @@ import { t, tp } from "../lib/i18n.js";
 import { iconEl } from "../ui/icons.js";
 import { reducedMotion, clamp } from "../lib/util.js";
 import { MAX_FRAMES } from "../store/projects.js";
+import { dropSlot } from "../core/frame-order.js";
 
 const CELL = 72;
+const TIE_PX = 0.25; // a pointer this close to the middle between two insertion bars is "in the middle"
 const LONG_PRESS_MS = 450;
 const MOVE_TOLERANCE = 8;
 const EDGE = 40; // px from either end of the strip where a held drag scrolls it
@@ -262,7 +264,8 @@ export class FilmStrip {
     if (Math.abs(sc.scrollLeft - drag.scroll) > 0.5) sc.scrollLeft = drag.scroll;
     if (!reducedMotion()) drag.cell.style.transform = `translateX(${drag.x - drag.originX + drag.scroll - drag.scroll0}px) scale(1.05)`;
     const trackX = drag.x - sc.getBoundingClientRect().left + drag.scroll - this.leadIn();
-    const slot = clamp(Math.round(trackX / CELL), 0, this.cells.length);
+    const moved = drag.x - drag.originX + drag.scroll - drag.scroll0;
+    const slot = clamp(dropSlot(trackX / CELL, moved, TIE_PX / CELL), 0, this.cells.length);
     drag.to = clamp(slot > drag.from ? slot - 1 : slot, 0, this.cells.length - 1);
     this.positionInsert(slot, drag.scroll);
   }

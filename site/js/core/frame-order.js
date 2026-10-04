@@ -1,4 +1,5 @@
-// Where a deleted frame goes back (fix round R22). The "ghost order" is the film's frame
+// Frame order rules that need no DOM: where a dragged frame is dropped (dropSlot), and
+// where a deleted frame goes back (fix round R22). The "ghost order" is the film's frame
 // order with the deleted frames that can still be restored kept in their old places. A
 // restore then lands next to the neighbour the frame had, whatever was added, deleted,
 // moved or restored in between. An index stored at delete time cannot do that.
@@ -20,6 +21,20 @@ export function syncGhost(ghost, order, keep) {
     anchor = id;
   }
   return out;
+}
+
+/**
+ * The insertion bar a dragged frame is dropped at: the bar nearest the pointer.
+ * pos: the pointer, in cell widths from the first bar. moved: how far the drag has gone, its
+ * sign is its direction. tie: how close to the middle between two bars counts as the middle.
+ * Exactly in the middle (a drag of whole cells from a cell's centre) the bar the drag is
+ * heading for wins, so a drag to the left behaves like the same drag to the right.
+ */
+export function dropSlot(pos, moved, tie = 0) {
+  const lower = Math.floor(pos);
+  const past = pos - lower;
+  if (Math.abs(past - 0.5) <= tie) return moved < 0 ? lower : lower + 1;
+  return past < 0.5 ? lower : lower + 1;
 }
 
 /** The index in `order` where the deleted frame `id` belongs. */

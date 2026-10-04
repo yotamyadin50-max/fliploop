@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { planRescue } from "../site/js/store/rescue.js";
+import { dropSlot } from "../site/js/core/frame-order.js";
 import { STRINGS } from "../site/js/data/strings.js";
 import { LESSON_COPY } from "../site/js/data/lesson-copy.js";
 
@@ -24,6 +25,23 @@ test("the name lesson 1 had before its rename is kept as a string, apart from th
   assert.ok(STRINGS["lesson.1.nameBefore"]);
   assert.notEqual(STRINGS["lesson.1.nameBefore"], LESSON_COPY["lesson.1.title"]);
   assert.match(STRINGS["lesson.projectTitle"], /\{n\}.*\{lessonName\}/);
+});
+
+test("drag reorder: the nearest insertion bar, and exactly in the middle the one the drag is heading for (G-03)", () => {
+  const tie = 0.25 / 72;
+  // frame 3 (bars 2 and 3 are its edges), pressed at its centre: pos 2.5
+  assert.equal(dropSlot(2.5, 0, tie), 3); // not moved yet: its own right edge, the frame stays
+  assert.equal(dropSlot(1.5, -72, tie), 1); // one whole cell left: bar 1, one place left
+  assert.equal(dropSlot(3.5, 72, tie), 4); // one whole cell right: bar 4, one place right
+  assert.equal(dropSlot(0.5, -144, tie), 0);
+  assert.equal(dropSlot(4.5, 144, tie), 5);
+  // away from the middle the direction does not matter
+  assert.equal(dropSlot(1.6, -65, tie), 2);
+  assert.equal(dropSlot(1.4, -80, tie), 1);
+  assert.equal(dropSlot(3.4, 65, tie), 3);
+  assert.equal(dropSlot(3.6, 80, tie), 4);
+  assert.equal(dropSlot(1.5 + 0.2 / 72, -72, tie), 1); // within a quarter pixel of the middle
+  assert.equal(dropSlot(1.5 + 0.5 / 72, -72, tie), 2);
 });
 
 test("rescue record: the stored project is the version the closed tab knew, all of it goes in (R2)", () => {
